@@ -1,0 +1,70 @@
+# Deploy to cPanel when pushing/merging to production.
+# Required GitHub secrets: SSH_PRIVATE_KEY, REMOTE_HOST, REMOTE_USER, REMOTE_PATH.
+# Optional: REMOTE_PORT (default 22 if unset in the action).
+# Server uses ./php and ./php $(which composer); npm is built on GitHub only. .git is deployed.
+name: Deploy to cPanel (Production)
+
+on:
+  push:
+    branches:
+      - production
+
+jobs:
+  deploy:
+    name: Deploy to cPanel
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build assets
+        run: |
+          npm ci
+          npm run build
+
+      - name: Deploy via SSH
+        uses: easingthemes/ssh-deploy@v5.1.0
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+          REMOTE_USER: ${{ secrets.REMOTE_USER }}
+          REMOTE_PORT: ${{ secrets.REMOTE_PORT || '22' }}
+          TARGET: ${{ secrets.REMOTE_PATH }}
+          SOURCE: ./
+          EXCLUDE: "node_modules, vendor, .env, .env.*, .github, storage/logs/*, storage/framework/cache/*, storage/framework/sessions/*, .phpunit.result.cache, npm-debug.log*, .idea, .vscode"
+          SCRIPT_BEFORE: |
+            cd "${{ secrets.REMOTE_PATH }}"
+            pwd
+            if [ -x ./php ]; then
+              ./php artisan down
+            else
+              php artisan down
+            fi
+          SCRIPT_AFTER: |
+            cd "${{ secrets.REMOTE_PATH }}"
+            pwd
+            COMPOSER="$([ -f "./composer.phar" ] && echo "./composer.phar" || command -v composer || echo /opt/cpanel/composer/bin/composer)"
+            if [ -x ./php ]; then
+              PHP_BIN=./php
+            else
+              PHP_BIN=php
+            fi
+            "$PHP_BIN" "$COMPOSER" install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+            "$PHP_BIN" artisan migrate --force
+            "$PHP_BIN" artisan storage:link
+            "$PHP_BIN" artisan optimize
+            "$PHP_BIN" artisan up
