@@ -63,7 +63,16 @@ class SitesTable
             ])
             ->filters([
                 TrashedFilter::make()
-                    ->searchable(),
+                    ->searchable()
+                    ->queries(
+                        true: fn ($query) => $query->onlyTrashed(),
+                        false: fn ($query) => $query->withoutTrashed(),
+                        blank: fn ($query) => $query->withTrashed(),
+                    )
+                    ->trueLabel('Only Trashed')
+                    ->falseLabel('Without Trashed')
+                    ->label('With Trashed')
+                    ->placeholder('With Trashed'),
                 SelectFilter::make('hosting')
                     ->relationship('hosting', 'domain')
                     ->searchable(['domain', 'username'])
