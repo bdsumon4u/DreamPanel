@@ -17,7 +17,7 @@ class DeploySite
 {
     public function handle(Site $site): void
     {
-        $site->update(['status' => SiteStatus::PENDING]);
+        $site->update(['status' => SiteStatus::PENDING, 'deleted_at' => null]);
 
         Bus::chain([
             new AuthorizeSshKey($site),
