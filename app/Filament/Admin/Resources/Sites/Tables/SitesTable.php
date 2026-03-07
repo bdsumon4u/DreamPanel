@@ -4,9 +4,11 @@ namespace App\Filament\Admin\Resources\Sites\Tables;
 
 use App\Filament\Admin\Resources\Sites\SiteResource;
 use App\Filament\Admin\Resources\Sites\Tables\Actions\BulkSiteUpdateAction;
+use App\Filament\Exports\SiteExporter;
 use App\Filament\Resources\Sites\Tables\SitesTable as BaseSitesTable;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\ExportBulkAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\QueryBuilder;
 use Filament\Tables\Filters\QueryBuilder\Constraints\NumberConstraint;
@@ -41,6 +43,8 @@ class SitesTable extends BaseSitesTable
             ->recordUrl(fn ($record) => SiteResource::getUrl('view', ['record' => $record]))
             ->toolbarActions([
                 BulkActionGroup::make([
+                    ExportBulkAction::make()
+                        ->exporter(SiteExporter::class),
                     BulkSiteUpdateAction::make(),
                     // DeleteBulkAction::make(),
                 ]),
