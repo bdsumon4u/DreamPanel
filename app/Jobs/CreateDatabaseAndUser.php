@@ -4,10 +4,11 @@ namespace App\Jobs;
 
 use App\Enums\SiteStatus;
 use App\Models\Site;
+use App\Services\HostingProviders\HostingProviderResolver;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
+use Throwable;
 
 class CreateDatabaseAndUser implements ShouldQueue
 {
@@ -27,44 +28,31 @@ class CreateDatabaseAndUser implements ShouldQueue
      */
     public function handle(): void
     {
-        Log::info('Creating database and user for '.$this->site->domain);
-        $data = $this->site->hosting->cPanel('MysqlFE', 'createdb', [
-            'db' => $this->site->prefixed_database_name,
-        ], 'cpanelresult');
+        Log::info('Starting database/user provisioning', [
+            'site_id' => $this->site->id,
+            'domain' => $this->site->domain,
+            'hosting_id' => $this->site->hosting_id,
+        ]);
 
-        if (array_key_exists('error', $data)) {
-            throw_unless(Str::contains($data['error'], 'already exists.'), $data['error']);
-        }
+        try {
+            app(HostingProviderResolver::class)
+                ->resolve($this->site->hosting)
+                ->createOrUpdateDatabaseAndUser($this->site);
 
-        $data = $this->site->hosting->cPanel('MysqlFE', 'createdbuser', [
-            'dbuser' => $this->site->prefixed_database_user,
-            'password' => $this->site->database_pass,
-        ], 'cpanelresult');
-
-        if (array_key_exists('error', $data)) {
-            throw_unless(Str::contains($data['error'], 'already exists.'), $data['error']);
-
-            Log::info('Database user '.$this->site->prefixed_database_user.' already exists. Updating password.');
-            $data = $this->site->hosting->cPanel('MysqlFE', 'changedbuserpassword', [
-                'dbuser' => $this->site->prefixed_database_user,
-                'password' => $this->site->database_pass,
-            ], 'cpanelresult');
-
-            if (array_key_exists('error', $data)) {
-                $this->site->update(['status' => SiteStatus::DEPLOY_FAILED]);
-                throw new \Exception($data['error']);
-            }
-        }
-
-        $data = $this->site->hosting->cPanel('MysqlFE', 'setdbuserprivileges', [
-            'db' => $this->site->prefixed_database_name,
-            'dbuser' => $this->site->prefixed_database_user,
-            'privileges' => 'ALL PRIVILEGES',
-        ], 'cpanelresult');
-
-        if (array_key_exists('error', $data)) {
+            Log::info('Database/user provisioning completed', [
+                'site_id' => $this->site->id,
+                'domain' => $this->site->domain,
+            ]);
+        } catch (Throwable $e) {
             $this->site->update(['status' => SiteStatus::DEPLOY_FAILED]);
-            throw new \Exception('Failed to set privileges on database');
+
+            Log::error('Database/user provisioning failed', [
+                'site_id' => $this->site->id,
+                'domain' => $this->site->domain,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
         }
     }
 }

@@ -4,10 +4,12 @@ namespace App\Jobs;
 
 use App\Enums\SiteStatus;
 use App\Models\Site;
+use App\Services\HostingProviders\Contracts\HasEmailSupport;
+use App\Services\HostingProviders\HostingProviderResolver;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
+use Throwable;
 
 class CreateEmailAccount implements ShouldQueue
 {
@@ -27,27 +29,41 @@ class CreateEmailAccount implements ShouldQueue
      */
     public function handle(): void
     {
-        Log::info('Creating email account '.$this->site->email_username);
-        $data = $this->site->hosting->cPanel('Email', 'addpop', [
+        Log::info('Starting email account creation', [
+            'site_id' => $this->site->id,
             'domain' => $this->site->domain,
-            'email' => $this->site->email_username,
-            'password' => $this->site->email_password,
-        ], 'cpanelresult');
+            'hosting_id' => $this->site->hosting_id,
+        ]);
 
-        if (array_key_exists('error', $data)) {
-            throw_unless(Str::endsWith($data['error'], 'already exists!'), $data['error']);
+        $provider = app(HostingProviderResolver::class)
+            ->resolve($this->site->hosting);
 
-            Log::info('Email account '.$this->site->email_username.' already exists. Updating password.');
-            $data = $this->site->hosting->cPanel('Email', 'passwdpop', [
-                'domain' => $this->site->domain,
-                'email' => $this->site->email_username,
-                'password' => $this->site->email_password,
-            ], 'cpanelresult');
+        if (! $provider instanceof HasEmailSupport) {
+            Log::info('Skipping email account creation: provider does not support email', [
+                'site_id' => $this->site->id,
+                'provider' => $provider::class,
+            ]);
+
+            return;
         }
 
-        if (array_key_exists('error', $data)) {
+        try {
+            $provider->createOrUpdateEmailAccount($this->site);
+
+            Log::info('Email account creation completed', [
+                'site_id' => $this->site->id,
+                'domain' => $this->site->domain,
+            ]);
+        } catch (Throwable $e) {
             $this->site->update(['status' => SiteStatus::DEPLOY_FAILED]);
-            throw new \Exception($data['error']);
+
+            Log::error('Email account creation failed', [
+                'site_id' => $this->site->id,
+                'domain' => $this->site->domain,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
         }
     }
 }

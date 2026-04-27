@@ -1,18 +1,30 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
+use App\Enums\HostingProvider;
+use App\Exceptions\UnsupportedHostingOperationException;
+use App\Services\HostingProviders\Contracts\NeedsSshAuthorization;
+use App\Services\HostingProviders\HostingProviderResolver;
 use App\Traits\BelongsToOrganization;
 use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 
 class Hosting extends Model
 {
     use BelongsToOrganization;
+
+    public const DEFAULT_FTP_PORT = 21;
+
+    public const DEFAULT_SSH_PORT = 22;
+
+    public const DEFAULT_SITE_LIMIT = 1;
 
     protected $hidden = [
         // 'password',
@@ -24,10 +36,35 @@ class Hosting extends Model
         return [
             'organization_id' => 'integer',
             'server_id' => 'integer',
+            'provider' => HostingProvider::class,
+            'ip' => 'string',
             'password' => 'encrypted',
             'token' => 'encrypted',
             'site_limit' => 'integer',
+            'ftp_port' => 'integer',
+            'ssh_port' => 'integer',
         ];
+    }
+
+    public function domain(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value) => $value ?? $this->ip ?? $this->server?->ip,
+        );
+    }
+
+    public function ip(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value) => $value ?? $this->server?->ip,
+        );
+    }
+
+    public function username(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value) => $value ?? 'root',
+        );
     }
 
     public function server(): BelongsTo
@@ -35,40 +72,20 @@ class Hosting extends Model
         return $this->belongsTo(Server::class);
     }
 
-    public function sites()
+    public function sites(): HasMany
     {
         return $this->hasMany(Site::class);
-    }
-
-    public function cPanel(string $module, string $action, array $params = [], ?string $key = null): array
-    {
-        $endpoint = "https://{$this->server->ip}:2083/json-api/cpanel";
-
-        /** @var \Illuminate\Http\Client\Response */
-        $response = Http::withHeader('Authorization', "cpanel $this->username:$this->token")
-            ->acceptJson()
-            ->withoutVerifying()
-            ->throw()
-            ->get($endpoint, [
-                'api.version' => 1,
-                'cpanel_jsonapi_func' => $action,
-                'cpanel_jsonapi_user' => $this->username,
-                'cpanel_jsonapi_module' => $module,
-                'cpanel_jsonapi_apiversion' => 2,
-            ] + $params);
-
-        return $response->json($key, []);
     }
 
     public function ftp(): Filesystem
     {
         return Storage::build([
             'driver' => 'ftp',
-            'host' => $this->server->ip,
+            'host' => $this->connectionIp(),
             'username' => $this->username,
             'password' => $this->password,
             // Optional but recommended
-            'port' => $this->server->ftp_port,
+            'port' => $this->ftpPort(),
             'root' => env('FTP_ROOT', '/'),
             'passive' => true,
             'ssl' => false,
@@ -76,42 +93,40 @@ class Hosting extends Model
         ]);
     }
 
+    public function provider(): HostingProvider
+    {
+        return $this->getAttribute('provider') ?? HostingProvider::Cpanel;
+    }
+
+    public function connectionIp(): string
+    {
+        $ip = $this->ip ?: (string) $this->server?->ip;
+
+        if ($ip === '') {
+            throw new UnsupportedHostingOperationException('No connection IP configured for hosting endpoint.');
+        }
+
+        return $ip;
+    }
+
+    public function ftpPort(): int
+    {
+        return $this->ftp_port ?? (int) ($this->server?->ftp_port ?? self::DEFAULT_FTP_PORT);
+    }
+
+    public function sshPort(): int
+    {
+        return $this->ssh_port ?? (int) ($this->server?->ssh_port ?? self::DEFAULT_SSH_PORT);
+    }
+
     public function copySshKey(): void
     {
-        $ftp = $this->ftp();
-        $key = Storage::disk('local')->get('HOTASH');
-        $pubKey = Storage::disk('local')->get('HOTASH.pub');
-        $ftp->put('.ssh/HOTASH', $key, 'private');
-        $ftp->put('.ssh/HOTASH.pub', $pubKey, 'private');
+        $provider = app(HostingProviderResolver::class)->resolve($this);
 
-        $this->importSshKey($pubKey);
-        $this->authorizeSshKey();
-    }
-
-    private function importSshKey(string $publicKey): void
-    {
-        Log::info('Importing SSH key for '.$this->domain);
-        $data = $this->cPanel('SSH', 'importkey', [
-            'name' => 'HOTASH',
-            'key' => $publicKey,
-            'type' => 'public',
-        ], 'cpanelresult');
-
-        if (array_key_exists('error', $data)) {
-            Log::error('Failed to import SSH key: '.$data['error']);
+        if (! $provider instanceof NeedsSshAuthorization) {
+            return;
         }
-    }
 
-    private function authorizeSshKey(): void
-    {
-        Log::info('Authorizing SSH key for '.$this->domain);
-        $data = $this->cPanel('SSH', 'authkey', [
-            'key' => 'HOTASH',
-            'action' => 'authorize',
-        ], 'cpanelresult');
-
-        if (array_key_exists('error', $data)) {
-            Log::error('Failed to authorize SSH key: '.$data['error']);
-        }
+        $provider->authorizeSshKey($this);
     }
 }

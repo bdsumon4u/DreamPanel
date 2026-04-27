@@ -5,11 +5,11 @@ namespace App\Jobs;
 use App\Enums\SiteStatus;
 use App\Jobs\Traits\CanDelete;
 use App\Models\Site;
+use App\Services\HostingProviders\HostingProviderResolver;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Throwable;
 
 class DeleteDomain implements ShouldQueue
@@ -43,34 +43,16 @@ class DeleteDomain implements ShouldQueue
                 'directory' => $this->site->directory,
             ]);
 
-            // Delete addon domain from cPanel
-            $subdomain = Str::of($this->site->domain)
-                ->beforeLast('.')
-                ->append('.')
-                ->append($this->site->hosting->domain);
+            app(HostingProviderResolver::class)
+                ->resolve($this->site->hosting)
+                ->deleteDomain($this->site);
 
-            $data = $this->site->hosting->cPanel('AddonDomain', 'deladdondomain', [
+            $this->site->delete();
+
+            Log::info('Site deletion completed', [
                 'domain' => $this->site->domain,
-                'subdomain' => $subdomain,
-            ], 'cpanelresult');
-
-            if (! array_key_exists('error', $data) || Str::contains($data['error'], 'does not correspond to')) {
-                Log::info('Successfully deleted from hosting server', [
-                    'domain' => $this->site->domain,
-                    'response' => $data,
-                ]);
-
-                $this->site->delete();
-            } else {
-                Log::error('Failed to delete from hosting server', [
-                    'domain' => $this->site->domain,
-                    'response' => $data,
-                ]);
-
-                $this->site->update(['status' => SiteStatus::DELETE_FAILED]);
-
-                throw new \Exception('Failed to delete site from hosting server: '.$data['error']);
-            }
+                'site_id' => $this->site->id,
+            ]);
         } catch (ConnectionException $e) {
             Log::error('Connection error while deleting site', [
                 'domain' => $this->site->domain,

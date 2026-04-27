@@ -4,10 +4,11 @@ namespace App\Jobs;
 
 use App\Enums\SiteStatus;
 use App\Models\Site;
+use App\Services\HostingProviders\HostingProviderResolver;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
+use Throwable;
 
 class CreateNewDomain implements ShouldQueue
 {
@@ -27,20 +28,31 @@ class CreateNewDomain implements ShouldQueue
      */
     public function handle(): void
     {
-        if ($this->site->directory === 'public_html') {
-            return;
-        }
+        Log::info('Starting domain creation', [
+            'site_id' => $this->site->id,
+            'domain' => $this->site->domain,
+            'hosting_id' => $this->site->hosting_id,
+        ]);
 
-        Log::info('Creating addon domain '.$this->site->domain);
-        $data = $this->site->hosting->cPanel('AddonDomain', 'addaddondomain', [
-            'dir' => $this->site->directory,
-            'newdomain' => $this->site->domain,
-            'subdomain' => Str::beforeLast($this->site->domain, '.'),
-        ], 'cpanelresult');
+        try {
+            app(HostingProviderResolver::class)
+                ->resolve($this->site->hosting)
+                ->createNewDomain($this->site);
 
-        if (array_key_exists('error', $data) && ! str($data['error'])->contains('already exists')) {
+            Log::info('Domain creation completed', [
+                'site_id' => $this->site->id,
+                'domain' => $this->site->domain,
+            ]);
+        } catch (Throwable $e) {
             $this->site->update(['status' => SiteStatus::DEPLOY_FAILED]);
-            throw new \Exception($data['error']);
+
+            Log::error('Domain creation failed', [
+                'site_id' => $this->site->id,
+                'domain' => $this->site->domain,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
         }
     }
 }

@@ -26,9 +26,12 @@ class DeploySite
             new CreateDatabaseAndUser($site),
             new CopySiteFromParent($site),
         ])
-            ->catch(function (Throwable $e) {
-                // A job within the chain has failed...
-                Log::error($e->getMessage());
+            ->catch(function (Throwable $e) use ($site) {
+                Log::error('Site deployment chain failed', [
+                    'site_id' => $site->id,
+                    'domain' => $site->domain,
+                    'error' => $e->getMessage(),
+                ]);
             })
             ->onQueue('high')
             ->dispatch();

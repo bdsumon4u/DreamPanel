@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\SiteStatus;
+use App\Services\HostingProviders\CloudPanelProvider;
+use App\Services\HostingProviders\Contracts\HasSiteUser;
 use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -41,6 +43,26 @@ class Site extends Model
     public function hosting(): BelongsTo
     {
         return $this->belongsTo(Hosting::class);
+    }
+
+    public function getUsernameAttribute(): string
+    {
+        $provider = $this->hosting->provider();
+        if ($provider instanceof HasSiteUser) {
+            return $provider->getSiteUser($this);
+        }
+
+        return $this->hosting->username;
+    }
+
+    public function getDirectoryAttribute(string $value = ''): string
+    {
+        $provider = $this->hosting->provider();
+        if (! $provider instanceof CloudPanelProvider) {
+            return $value ?? $this->domain;
+        }
+
+        return '/home/'.$this->username.'/htdocs/'.($value ?? $this->domain);
     }
 
     public function getPrefixedDatabaseNameAttribute(): string

@@ -8,6 +8,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Spatie\Ssh\Ssh;
 
 class CopySiteFromParent implements ShouldQueue
@@ -31,7 +32,7 @@ class CopySiteFromParent implements ShouldQueue
     public function handle(): void
     {
         Log::info('Deploying site '.$this->site->name.' to '.$this->site->domain);
-        $process = Ssh::create($this->site->parent->hosting->username, $this->site->parent->hosting->server->ip)
+        $process = Ssh::create($this->site->parent->hosting->username, $this->site->parent->hosting->connectionIp())
             ->usePrivateKey(Storage::disk('local')->path('HOTASH'))
             ->disablePasswordAuthentication()
             ->disableStrictHostKeyChecking()
@@ -41,10 +42,11 @@ class CopySiteFromParent implements ShouldQueue
                 './copy.sh '.collect([
                     '-s' => $this->site->name,
                     '-d' => $this->site->domain,
-                    '-h' => $this->site->hosting->server->ip,
-                    '-u' => $this->site->hosting->username,
-                    '-db' => $this->site->prefixed_database_name,
-                    '-dbu' => $this->site->prefixed_database_user,
+                    '-h' => $this->site->hosting->connectionIp(),
+                    '-u' => $this->site->username,
+                    '-su' => $this->site->username,
+                    '-db' => $this->site->database_name,
+                    '-dbu' => $this->site->database_user,
                     '-dbp' => $this->site->database_pass,
                     '-mu' => $this->site->email_username,
                     '-mp' => $this->site->email_password,
@@ -71,6 +73,31 @@ class CopySiteFromParent implements ShouldQueue
 
         $this->site->update(['status' => SiteStatus::SITE_ACTIVE]);
         Log::info('Site '.$this->site->name.' deployed successfully to '.$this->site->domain);
+    }
+
+    private function generateSiteUser(Site $site): string
+    {
+        $maxLength = 24;
+        $suffix = dechex((int) $site->id);
+        $suffix = $suffix !== '' ? $suffix : substr(md5($site->domain), 0, 6);
+        $suffix = Str::lower(preg_replace('/[^a-z0-9]/', '', $suffix) ?? '');
+
+        $base = Str::lower($site->domain);
+        $base = preg_replace('/[^a-z0-9]/', '', $base) ?? '';
+
+        if ($base === '' || ctype_digit($base[0])) {
+            $base = 'site'.$base;
+        }
+
+        $availableBaseLength = max(1, $maxLength - strlen($suffix));
+        $base = substr($base, 0, $availableBaseLength);
+        $username = substr($base.$suffix, 0, $maxLength);
+
+        if ($username === '' || ctype_digit($username[0])) {
+            $username = 's'.substr($username, 0, $maxLength - 1);
+        }
+
+        return $username;
     }
 
     /**

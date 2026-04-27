@@ -6,7 +6,6 @@ set -euo pipefail
 ####################################
 KEY_NAME="HOTASH"
 SSH_KEY="$HOME/.ssh/$KEY_NAME"
-DEFAULT_ROOT_DIR="public_html"
 
 ####################################
 # LOAD SOURCE DB FROM .env
@@ -26,16 +25,17 @@ done
 ####################################
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        -s|--site) target_site="$2"; shift 2 ;;
-        -d|--domain) target_domain="$2"; shift 2 ;;
-        -h|--host) ssh_host="$2"; shift 2 ;;
-        -u|--uname) target_username="$2"; shift 2 ;;
-        -db|--dbname) target_db_dbase="$2"; shift 2 ;;
-        -dbu|--dbuser) target_db_uname="$2"; shift 2 ;;
-        -dbp|--dbpass) target_db_upass="$2"; shift 2 ;;
-        -mu|--mailuser) target_mail_user="$2"; shift 2 ;;
-        -mp|--mailpass) target_mail_pass="$2"; shift 2 ;;
-        -r|--rootdir) target_root_dir="$2"; shift 2 ;;
+        -s|--site) [[ -n "${2-}" && "${2-}" != -* ]] && { target_site="$2"; shift 2; } || shift ;;
+        -d|--domain) [[ -n "${2-}" && "${2-}" != -* ]] && { target_domain="$2"; shift 2; } || shift ;;
+        -h|--host) [[ -n "${2-}" && "${2-}" != -* ]] && { ssh_host="$2"; shift 2; } || shift ;;
+        -u|--uname) [[ -n "${2-}" && "${2-}" != -* ]] && { target_username="$2"; shift 2; } || shift ;;
+        -su|--ssh-uname) [[ -n "${2-}" && "${2-}" != -* ]] && { ssh_username="$2"; shift 2; } || shift ;;
+        -db|--dbname) [[ -n "${2-}" && "${2-}" != -* ]] && { target_db_dbase="$2"; shift 2; } || shift ;;
+        -dbu|--dbuser) [[ -n "${2-}" && "${2-}" != -* ]] && { target_db_uname="$2"; shift 2; } || shift ;;
+        -dbp|--dbpass) [[ -n "${2-}" && "${2-}" != -* ]] && { target_db_upass="$2"; shift 2; } || shift ;;
+        -mu|--mailuser) [[ -n "${2-}" && "${2-}" != -* ]] && { target_mail_user="$2"; shift 2; } || shift ;;
+        -mp|--mailpass) [[ -n "${2-}" && "${2-}" != -* ]] && { target_mail_pass="$2"; shift 2; } || shift ;;
+        -r|--rootdir) [[ -n "${2-}" && "${2-}" != -* ]] && { target_root_dir="$2"; shift 2; } || shift ;;
         *) echo "❌ Unknown option: $1"; exit 1 ;;
     esac
 done
@@ -43,25 +43,45 @@ done
 ####################################
 # VALIDATION & PROMPTS
 ####################################
-: "${target_site:?Missing --site}"
-: "${target_domain:?Missing --domain}"
-: "${ssh_host:?Missing --host}"
-: "${target_username:?Missing --uname}"
-: "${target_db_dbase:?Missing --dbname}"
-: "${target_db_uname:?Missing --dbuser}"
-: "${target_db_upass:?Missing --dbpass}"
-: "${target_mail_user:?Missing --mailuser}"
-: "${target_mail_pass:?Missing --mailpass}"
-target_root_dir="${target_root_dir:-$DEFAULT_ROOT_DIR}"
+prompt_required() {
+    local var_name="$1"
+    local prompt_text="$2"
+    local is_secret="${3:-false}"
+    local value="${!var_name-}"
+
+    while [[ -z "$value" ]]; do
+        if [[ "$is_secret" == "true" ]]; then
+            read -r -s -p "$prompt_text: " value
+            echo
+        else
+            read -r -p "$prompt_text: " value
+        fi
+    done
+
+    printf -v "$var_name" '%s' "$value"
+}
+
+prompt_required target_site "Target site name (--site)"
+prompt_required target_domain "Target domain (--domain)"
+prompt_required ssh_host "SSH host (--host)"
+prompt_required target_username "Target SSH username (--uname)"
+prompt_required ssh_username "SSH username (--ssh-uname)"
+prompt_required target_db_dbase "Target database name (--dbname)"
+prompt_required target_db_uname "Target database user (--dbuser)"
+prompt_required target_db_upass "Target database password (--dbpass)" true
+prompt_required target_mail_user "Target mail user (--mailuser)"
+prompt_required target_mail_pass "Target mail password (--mailpass)" true
+prompt_required target_root_dir "Target root directory (--rootdir)"
 
 ####################################
 # SSH SETUP (PERSISTENT CONNECTION)
 ####################################
-TARGET="$target_username@$ssh_host"
+TARGET="$ssh_username@$ssh_host"
 SSH_OPTS="-T -i $SSH_KEY \
 -o ControlMaster=auto \
 -o ControlPersist=10m \
 -o ControlPath=~/.ssh/cm-%r@%h:%p \
+-o LogLevel=ERROR \
 -o Compression=yes"
 
 ssh-keyscan -H "$ssh_host" >> ~/.ssh/known_hosts 2>/dev/null || true
@@ -75,7 +95,7 @@ ssh $SSH_OPTS "$TARGET" "chmod 600 .ssh/$KEY_NAME"
 # CLEAR SOURCE CACHE BEFORE COPYING
 ####################################
 echo "🧹 Clearing source cache..."
-php artisan optimize:clear 2>/dev/null || true
+./php artisan optimize:clear 2>/dev/null || true
 
 ####################################
 # STREAM FILES (NO INTERMEDIATE FILE)
@@ -97,13 +117,13 @@ tar \
     mkdir -p '$target_root_dir'
     cd '$target_root_dir'
     tar -xzf -
-    
+
     # Create Laravel directories that were excluded
     mkdir -p storage/framework/{sessions,views,cache,cache/data,testing}
     mkdir -p storage/logs
     mkdir -p storage/debugbar
     mkdir -p bootstrap/cache
-    
+
     # Fix ownership and permissions
     chown -R \$(whoami):\$(whoami) storage bootstrap/cache
     chmod -R 775 storage bootstrap/cache
@@ -116,10 +136,10 @@ tar \
 ####################################
 echo "🗄️  Copying database..."
 
-mysqldump --single-transaction \
-  -u "$DB_USERNAME" -p"$DB_PASSWORD" "$DB_DATABASE" \
+MYSQL_PWD="$DB_PASSWORD" mysqldump --single-transaction \
+  -u "$DB_USERNAME" "$DB_DATABASE" \
 | ssh $SSH_OPTS "$TARGET" "
-    /usr/bin/mysql -u '$target_db_uname' -p'$target_db_upass' '$target_db_dbase'
+    MYSQL_PWD='$target_db_upass' /usr/bin/mysql -u '$target_db_uname' '$target_db_dbase'
 "
 
 ####################################
@@ -141,7 +161,15 @@ echo "🚀 Deploying on remote server..."
 ssh $SSH_OPTS "$TARGET" <<EOF
 set -e
 
+chown -R $target_username:$target_username "$target_root_dir"
+
 cd "$target_root_dir"
+
+echo "Current user: $(whoami)"
+echo "Present working directory: $(pwd)"
+echo "Target root directory: $target_root_dir"
+
+git config --global --add safe.directory "$target_root_dir" || true
 
 if [[ ! -f .env ]]; then
     echo "❌ ERROR: .env not found"
@@ -173,31 +201,11 @@ sed -i "s|MAIL_PASSWORD=.*|MAIL_PASSWORD=$(escape_sed_pipe "$target_mail_pass")|
 sed -i "s/MAIL_FROM_ADDRESS=.*/MAIL_FROM_ADDRESS=$(escape_sed "$target_mail_user")/g" .env
 
 ####################################
-# FIND WORKING PHP BINARY
-####################################
-find_php() {
-    for php in /opt/cpanel/ea-php84/root/usr/bin/php /opt/alt/php84/usr/bin/php /usr/bin/php; do
-        if [[ -x "\$php" ]]; then
-            echo "\$php"
-            return 0
-        fi
-    done
-    return 1
-}
-
-PHP=\$(find_php) || {
-    echo "❌ No PHP binary found"
-    exit 1
-}
-
-echo "▶ Using PHP: \$PHP"
-
-####################################
 # REGENERATE AUTOLOADER (CRITICAL)
 ####################################
 # Composer caches absolute paths, must regenerate for new location
 if [[ -f composer.json ]]; then
-    \$PHP "\$([ -f "./composer.phar" ] && echo "./composer.phar" || command -v composer || echo /opt/cpanel/composer/bin/composer)" dump-autoload -o 2>/dev/null || echo "⚠️  Could not regenerate autoloader"
+    ./php "\$([ -f "./composer.phar" ] && echo "./composer.phar" || command -v composer || echo /opt/cpanel/composer/bin/composer)" dump-autoload -o 2>/dev/null || echo "⚠️  Could not regenerate autoloader"
 fi
 
 ####################################
@@ -206,9 +214,9 @@ fi
 # Remove old symlink/directory first so storage:link can create fresh one
 rm -rf public/storage storage/app/pathao*
 
-\$PHP artisan key:generate --force
-\$PHP artisan migrate --force
-\$PHP artisan storage:link
+./php artisan key:generate --force
+./php artisan migrate --force
+./php artisan storage:link
 
 # Run custom deployment script if it exists
 if [[ -f ./server_deploy.sh ]]; then

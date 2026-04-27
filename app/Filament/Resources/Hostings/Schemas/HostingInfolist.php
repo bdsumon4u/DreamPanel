@@ -16,7 +16,11 @@ class HostingInfolist
                 TextEntry::make('organization.name')
                     ->label('Organization'),
                 TextEntry::make('server.name')
-                    ->label('Server'),
+                    ->label('Server')
+                    ->placeholder('Standalone'),
+                TextEntry::make('ip')
+                    ->label('Direct IP')
+                    ->placeholder('-'),
                 TextEntry::make('domain'),
                 TextEntry::make('username'),
                 TextEntry::make('site_limit')

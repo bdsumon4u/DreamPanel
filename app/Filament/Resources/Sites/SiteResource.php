@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Sites;
 
 use App\Filament\Resources\Sites\Pages\CreateSite;
 use App\Filament\Resources\Sites\Pages\EditSite;
+use App\Filament\Resources\Sites\Pages\ListActivities;
 use App\Filament\Resources\Sites\Pages\ListSites;
 use App\Filament\Resources\Sites\Pages\MultiSite;
 use App\Filament\Resources\Sites\Pages\ViewSite;
@@ -55,6 +56,7 @@ class SiteResource extends Resource
             'index' => ListSites::route('/'),
             'create' => CreateSite::route('/create'),
             'multi' => MultiSite::route('/multi'),
+            'activities' => ListActivities::route('/{record}/activities'),
             'view' => ViewSite::route('/{record}'),
             'edit' => EditSite::route('/{record}/edit'),
         ];
