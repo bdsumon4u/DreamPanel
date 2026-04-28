@@ -8,7 +8,6 @@ use App\Enums\HostingProvider;
 use App\Exceptions\UnsupportedHostingOperationException;
 use App\Services\HostingProviders\Contracts\NeedsSshAuthorization;
 use App\Services\HostingProviders\HostingProviderResolver;
-use App\Traits\BelongsToOrganization;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
@@ -18,8 +17,6 @@ use Illuminate\Support\Facades\Storage;
 
 class Hosting extends Model
 {
-    use BelongsToOrganization;
-
     public const DEFAULT_FTP_PORT = 21;
 
     public const DEFAULT_SSH_PORT = 22;
@@ -34,7 +31,6 @@ class Hosting extends Model
     protected function casts(): array
     {
         return [
-            'organization_id' => 'integer',
             'server_id' => 'integer',
             'provider' => HostingProvider::class,
             'ip' => 'string',

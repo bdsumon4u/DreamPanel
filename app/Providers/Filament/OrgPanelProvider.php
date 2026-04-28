@@ -2,11 +2,7 @@
 
 namespace App\Providers\Filament;
 
-use App\Filament\Pages\Tenancy\EditOrganizationProfile;
-use App\Filament\Pages\Tenancy\RegisterOrganization;
 use App\Filament\Widgets\DeletingSitesWidget;
-use App\Models\Organization;
-use Filament\Actions\Action;
 use Filament\FontProviders\GoogleFontProvider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -16,11 +12,8 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Widgets\AccountWidget;
-use Filament\Widgets\FilamentInfoWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
@@ -76,20 +69,8 @@ class OrgPanelProvider extends PanelProvider
                 Authenticate::class,
             ])
             ->strictAuthorization()
-            // ->tenantMenu(false)
-            ->tenantMenuItems([
-                'profile' => fn (Action $action): Action => $action->label(__('Settings')),
-            ])
-            ->tenant(Organization::class, 'ulid')
-            ->tenantRegistration(RegisterOrganization::class)
-            ->tenantProfile(EditOrganizationProfile::class)
             ->viteTheme('resources/css/filament/org/theme.css')
             ->unsavedChangesAlerts()
             ->spa(hasPrefetching: true);
-    }
-
-    public function boot(): void
-    {
-        Model::resolveRelationUsing('organization', fn (Model $model) => $model->belongsTo(Organization::class));
     }
 }

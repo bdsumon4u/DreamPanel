@@ -30,7 +30,7 @@ class HostingPolicy
      */
     public function view(User $user, Hosting $hosting): bool
     {
-        return $user->canAccessTenant($hosting->organization);
+        return true;
     }
 
     /**

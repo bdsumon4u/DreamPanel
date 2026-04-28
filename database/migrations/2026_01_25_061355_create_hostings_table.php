@@ -13,7 +13,6 @@ return new class extends Migration
     {
         Schema::create('hostings', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('organization_id')->constrained()->onDelete('cascade');
             $table->foreignId('server_id')->constrained()->onDelete('cascade');
             $table->string('domain');
             $table->string('username');

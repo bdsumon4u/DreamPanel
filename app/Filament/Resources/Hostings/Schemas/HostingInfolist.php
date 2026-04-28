@@ -13,8 +13,6 @@ class HostingInfolist
 
         return $schema
             ->components([
-                TextEntry::make('organization.name')
-                    ->label('Organization'),
                 TextEntry::make('server.name')
                     ->label('Server')
                     ->placeholder('Standalone'),

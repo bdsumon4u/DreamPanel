@@ -34,7 +34,7 @@ class UpdateSite implements ShouldQueue
             $this->site->hosting->copySshKey();
             Log::info('Updating site '.$this->site->name.' on '.$this->site->domain);
             $process = Ssh::create($this->site->hosting->username, $this->site->hosting->connectionIp())
-                ->usePrivateKey(Storage::disk('local')->path('HOTASH'))
+                ->usePrivateKey(Storage::disk('local')->path('HotashTech'))
                 ->disablePasswordAuthentication()
                 ->disableStrictHostKeyChecking()
                 ->setTimeout(700)

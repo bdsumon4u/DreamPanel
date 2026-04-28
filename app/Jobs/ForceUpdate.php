@@ -32,7 +32,7 @@ class ForceUpdate implements ShouldQueue
         try {
             $this->site->hosting->copySshKey();
             $process = Ssh::create($this->site->hosting->username, $this->site->hosting->connectionIp())
-                ->usePrivateKey(Storage::disk('local')->path('HOTASH'))
+                ->usePrivateKey(Storage::disk('local')->path('HotashTech'))
                 ->disablePasswordAuthentication()
                 ->disableStrictHostKeyChecking()
                 ->setTimeout(1000)

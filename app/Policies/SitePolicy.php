@@ -5,7 +5,6 @@ namespace App\Policies;
 use App\Models\Admin;
 use App\Models\Site;
 use App\Models\User;
-use Filament\Facades\Filament;
 
 class SitePolicy
 {
@@ -31,7 +30,7 @@ class SitePolicy
      */
     public function view(User $user, Site $site): bool
     {
-        return $site->organization_id === Filament::getTenant()?->getKey();
+        return true;
     }
 
     /**
@@ -47,7 +46,7 @@ class SitePolicy
      */
     public function update(User $user, Site $site): bool
     {
-        return $site->organization_id === Filament::getTenant()?->getKey();
+        return true;
     }
 
     /**
@@ -55,7 +54,7 @@ class SitePolicy
      */
     public function delete(User $user, Site $site): bool
     {
-        return $site->organization_id === Filament::getTenant()?->getKey();
+        return true;
     }
 
     /**

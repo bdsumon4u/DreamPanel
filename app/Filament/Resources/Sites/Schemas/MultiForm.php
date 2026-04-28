@@ -22,7 +22,7 @@ class MultiForm extends SiteForm
                 TextInput::make('email_password')
                     ->label('Email Password')
                     ->required()
-                    ->default('Hotash<Email>Pass')
+                    ->default('Pass<word>123!')
                     ->live()
                     ->afterStateUpdated(function (Get $get, Set $set, mixed $state) {
                         foreach ($get('sites') ?? [] as $index => $site) {
@@ -32,7 +32,7 @@ class MultiForm extends SiteForm
                 TextInput::make('database_pass')
                     ->label('Database Password')
                     ->required()
-                    ->default('Hotash<DB>Pass')
+                    ->default('Pass<word>123!')
                     ->live()
                     ->afterStateUpdated(function (Get $get, Set $set, mixed $state) {
                         foreach ($get('sites') ?? [] as $index => $site) {

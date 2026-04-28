@@ -16,8 +16,6 @@ class HostingsTable
     {
         return $table
             ->columns([
-                TextColumn::make('organization.name')
-                    ->searchable(),
                 TextColumn::make('server.name')
                     ->searchable(),
                 TextColumn::make('domain')

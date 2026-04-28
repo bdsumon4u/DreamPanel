@@ -11,8 +11,6 @@ class SiteInfolist
     {
         return $schema
             ->components([
-                TextEntry::make('organization.name')
-                    ->label('Organization'),
                 TextEntry::make('parent.name')
                     ->label('Parent')
                     ->placeholder('-'),

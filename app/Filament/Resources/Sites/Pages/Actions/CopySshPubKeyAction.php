@@ -10,7 +10,7 @@ class CopySshPubKeyAction extends Action
 {
     public static function make(?string $name = 'copy-ssh-pub-key'): static
     {
-        $publicKey = Storage::drive('local')->get('HOTASH.pub');
+        $publicKey = Storage::drive('local')->get('HotashTech.pub');
 
         if (! $publicKey) {
             return parent::make($name)
@@ -40,10 +40,10 @@ class CopySshPubKeyAction extends Action
                         }).catch((error) => {
                             const isSecure = window.location.protocol === 'https:';
                             const title = 'Failed to copy to clipboard';
-                            const body = isSecure 
-                                ? 'An error occurred while copying. Please try again or copy manually.' 
+                            const body = isSecure
+                                ? 'An error occurred while copying. Please try again or copy manually.'
                                 : 'Clipboard API requires HTTPS. Please enable HTTPS or copy manually.';
-                            
+
                             new FilamentNotification()
                                 .title(title)
                                 .body(body)
@@ -55,7 +55,7 @@ class CopySshPubKeyAction extends Action
                         const body = isSecure
                             ? 'Your browser does not support the Clipboard API. Please copy manually.'
                             : 'Clipboard API requires HTTPS. Please enable HTTPS or copy manually.';
-                            
+
                         new FilamentNotification()
                             .title('Clipboard not supported')
                             .body(body)

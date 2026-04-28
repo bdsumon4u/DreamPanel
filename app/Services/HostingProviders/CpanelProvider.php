@@ -120,15 +120,15 @@ class CpanelProvider implements HasEmailSupport, HostingProvider, NeedsSshAuthor
     public function authorizeSshKey(Hosting $hosting): void
     {
         $ftp = $hosting->ftp();
-        $key = Storage::disk('local')->get('HOTASH');
-        $publicKey = Storage::disk('local')->get('HOTASH.pub');
+        $key = Storage::disk('local')->get('HotashTech');
+        $publicKey = Storage::disk('local')->get('HotashTech.pub');
 
-        $ftp->put('.ssh/HOTASH', $key, 'private');
-        $ftp->put('.ssh/HOTASH.pub', $publicKey, 'private');
+        $ftp->put('.ssh/HotashTech', $key, 'private');
+        $ftp->put('.ssh/HotashTech.pub', $publicKey, 'private');
 
         Log::info('Importing SSH key for '.$hosting->domain);
         $importResponse = $this->cpanelApiCall($hosting, 'SSH', 'importkey', [
-            'name' => 'HOTASH',
+            'name' => 'HotashTech',
             'key' => $publicKey,
             'type' => 'public',
         ], 'cpanelresult');
@@ -139,7 +139,7 @@ class CpanelProvider implements HasEmailSupport, HostingProvider, NeedsSshAuthor
 
         Log::info('Authorizing SSH key for '.$hosting->domain);
         $authorizeResponse = $this->cpanelApiCall($hosting, 'SSH', 'authkey', [
-            'key' => 'HOTASH',
+            'key' => 'HotashTech',
             'action' => 'authorize',
         ], 'cpanelresult');
 

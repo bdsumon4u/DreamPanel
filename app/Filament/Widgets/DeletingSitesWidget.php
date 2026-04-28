@@ -8,7 +8,6 @@ use App\Filament\Resources\Sites\SiteResource;
 use App\Jobs\DeleteFiles;
 use App\Models\Site;
 use Filament\Actions\Action;
-use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Grouping\Group;
@@ -27,7 +26,6 @@ class DeletingSitesWidget extends BaseWidget
             ->poll('5s')
             ->query(
                 Site::onlyTrashed()
-                    ->when(Filament::getTenant(), fn ($query) => $query->whereBelongsTo(Filament::getTenant()))
                     ->whereHas('hosting', fn ($query) => $query->where('provider', HostingProvider::Cpanel))
                     ->where('status', SiteStatus::DELETING)
                     ->orderBy('updated_at', 'desc')
@@ -55,10 +53,6 @@ class DeletingSitesWidget extends BaseWidget
                     ->action(fn ($record) => DeleteFiles::dispatch($record)->onQueue('high')),
             ])
             ->filters([
-                SelectFilter::make('organization')
-                    ->relationship('organization', 'name')
-                    ->searchable()
-                    ->preload(),
                 SelectFilter::make('hosting')
                     ->relationship('hosting', 'domain')
                     ->searchable(['domain', 'username'])

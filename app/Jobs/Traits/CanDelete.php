@@ -15,9 +15,7 @@ trait CanDelete
             Notification::make()
                 ->title('Refusing to delete primary site '.$this->site->domain)
                 ->danger()
-                ->sendToDatabase(
-                    $this->site->organization()->users()->get()
-                )
+                ->sendToDatabase(\App\Models\User::query()->get())
                 ->send();
 
             return false;

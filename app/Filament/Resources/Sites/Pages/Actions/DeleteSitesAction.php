@@ -7,7 +7,6 @@ use App\Jobs\DeleteDomain;
 use App\Models\Hosting;
 use App\Models\Site;
 use Filament\Actions\Action;
-use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Support\Colors\Color;
@@ -23,14 +22,7 @@ class DeleteSitesAction extends Action
             ->schema([
                 Select::make('hosting_id')
                     ->label('Hosting')
-                    ->options(function () {
-                        $query = Hosting::query();
-                        if (Filament::getTenant()) {
-                            $query->whereBelongsTo(Filament::getTenant());
-                        }
-
-                        return $query->pluck('domain', 'id');
-                    })
+                    ->options(fn () => Hosting::query()->pluck('domain', 'id'))
                     ->searchable()
                     ->required()
                     ->live(),

@@ -12,10 +12,6 @@ class HostingForm
     {
         return $schema
             ->components([
-                Select::make('organization_id')
-                    ->label('Team')
-                    ->relationship('organization', 'name')
-                    ->required(),
                 Select::make('server_id')
                     ->label('WHM')
                     ->relationship('server', 'name')

@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('hostings', function (Blueprint $table) {
-            $table->string('provider')->default(HostingProvider::Cpanel)->after('organization_id');
+            $table->string('provider')->default(HostingProvider::Cpanel)->after('id');
             $table->string('ip')->nullable()->after('server_id');
             $table->integer('ftp_port')->nullable()->after('token');
             $table->integer('ssh_port')->nullable()->after('ftp_port');

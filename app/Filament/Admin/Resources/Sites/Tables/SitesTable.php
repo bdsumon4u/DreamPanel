@@ -9,10 +9,8 @@ use App\Filament\Resources\Sites\Tables\SitesTable as BaseSitesTable;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ExportBulkAction;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\QueryBuilder;
 use Filament\Tables\Filters\QueryBuilder\Constraints\NumberConstraint;
-use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class SitesTable extends BaseSitesTable
@@ -21,18 +19,8 @@ class SitesTable extends BaseSitesTable
     {
         $table = parent::configure($table);
 
-        return $table->columns([
-            TextColumn::make('organization.name')
-                ->sortable()
-                ->searchable()
-                ->description(fn ($record) => $record->service_id ?? $record->organization?->service_id),
-            ...$table->getColumns(),
-        ])
+        return $table->columns($table->getColumns())
             ->filters([
-                SelectFilter::make('organization')
-                    ->relationship('organization', 'name')
-                    ->searchable()
-                    ->preload(),
                 ...$table->getFilters(),
                 QueryBuilder::make()->constraints([
                     NumberConstraint::make('service_id')

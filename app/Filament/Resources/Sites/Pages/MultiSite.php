@@ -56,7 +56,6 @@ class MultiSite extends CreateSite
                 $this->callHook('beforeCreate');
 
                 $this->record = $this->handleRecordCreation($siteData + [
-                    'organization_id' => $hosting->organization_id,
                     'parent_id' => $data['parent_id'] ?? null,
                     'hosting_id' => $data['hosting_id'] ?? null,
                     'name' => $siteData['domain'],

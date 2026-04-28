@@ -33,7 +33,7 @@ class CopySiteFromParent implements ShouldQueue
     {
         Log::info('Deploying site '.$this->site->name.' to '.$this->site->domain);
         $process = Ssh::create($this->site->parent->hosting->username, $this->site->parent->hosting->connectionIp())
-            ->usePrivateKey(Storage::disk('local')->path('HOTASH'))
+            ->usePrivateKey(Storage::disk('local')->path('HotashTech'))
             ->disablePasswordAuthentication()
             ->disableStrictHostKeyChecking()
             ->setTimeout(1000)

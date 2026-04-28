@@ -4,7 +4,6 @@ namespace App\Filament\Admin\Resources\Users\Pages;
 
 use App\Filament\Admin\Resources\Users\UserResource;
 use Filament\Actions\EditAction;
-use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Section;
@@ -39,23 +38,6 @@ class ViewUser extends ViewRecord
                             ->dateTime(),
                     ])
                     ->columns(2),
-                Section::make('Organizations')
-                    ->schema([
-                        RepeatableEntry::make('organizations')
-                            ->schema([
-                                TextEntry::make('name')
-                                    ->weight('bold'),
-                                TextEntry::make('ulid')
-                                    ->label('ID'),
-                                TextEntry::make('phone')
-                                    ->placeholder('No phone'),
-                                TextEntry::make('created_at')
-                                    ->dateTime()
-                                    ->label('Organization created'),
-                            ])
-                            ->columns(2)
-                            ->columnSpanFull(),
-                    ]),
             ]);
     }
 }

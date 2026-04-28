@@ -4,7 +4,7 @@ set -euo pipefail
 ####################################
 # CONFIG
 ####################################
-KEY_NAME="HOTASH"
+KEY_NAME="HotashTech"
 SSH_KEY="$HOME/.ssh/$KEY_NAME"
 
 ####################################

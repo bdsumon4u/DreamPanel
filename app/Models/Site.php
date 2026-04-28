@@ -6,7 +6,6 @@ use App\Enums\HostingProvider;
 use App\Enums\SiteStatus;
 use App\Services\HostingProviders\Contracts\HasSiteUser;
 use App\Services\HostingProviders\HostingProviderResolver;
-use App\Traits\BelongsToOrganization;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -15,7 +14,6 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Site extends Model
 {
-    use BelongsToOrganization;
     use LogsActivity;
     use SoftDeletes;
 
@@ -27,7 +25,6 @@ class Site extends Model
     protected function casts(): array
     {
         return [
-            'organization_id' => 'integer',
             'parent_id' => 'integer',
             'hosting_id' => 'integer',
             'email_password' => 'encrypted',

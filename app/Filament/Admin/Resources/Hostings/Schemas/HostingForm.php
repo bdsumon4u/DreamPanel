@@ -33,13 +33,6 @@ class HostingForm
                             'site_limit' => Hosting::DEFAULT_SITE_LIMIT,
                         ]);
                     }),
-                Select::make('organization_id')
-                    ->label('Team')
-                    ->relationship('organization', 'name')
-                    ->searchable()
-                    ->preload()
-                    ->required()
-                    ->live(),
                 Select::make('server_id')
                     ->label('WHM')
                     ->relationship('server', 'name')
@@ -61,8 +54,8 @@ class HostingForm
                     ->label('Direct IP')
                     ->required(fn (Get $get): bool => self::resolvedProvider($get) === HostingProvider::CloudPanel->value),
                 TextInput::make('domain')
-                    ->required()
-                    ->visible(fn (Get $get): bool => self::resolvedProvider($get) === HostingProvider::Cpanel->value),
+                    ->label(fn (Get $get): string => self::resolvedProvider($get) === HostingProvider::Cpanel->value ? 'Domain' : 'Hostname')
+                    ->required(),
                 TextInput::make('username')
                     ->required()
                     ->minLength(2)

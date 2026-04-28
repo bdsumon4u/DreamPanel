@@ -44,7 +44,7 @@ class DeleteFiles implements ShouldQueue
 
             $deleteCommand = 'rm -rf '.escapeshellarg($this->site->full_directory);
             $process = Ssh::create($this->site->hosting->username, $this->site->hosting->connectionIp())
-                ->usePrivateKey(Storage::disk('local')->path('HOTASH'))
+                ->usePrivateKey(Storage::disk('local')->path('HotashTech'))
                 ->disablePasswordAuthentication()
                 ->disableStrictHostKeyChecking()
                 ->usePort($this->site->hosting->sshPort())

@@ -8,58 +8,19 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Group;
-use Filament\Schemas\Components\Utilities\Get;
-use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
-use Illuminate\Database\Eloquent\Builder;
 
 class SiteForm extends BaseSiteForm
 {
-    protected static function organizationField(): Component
-    {
-        return Select::make('organization_id')
-            ->label('Team')
-            ->relationship('organization', 'name')
-            ->searchable()
-            ->preload()
-            ->required()
-            ->live()
-            ->afterStateUpdated(function (Set $set): void {
-                $set('hosting_id', null);
-                $set('parent_id', null);
-                $set('hosting_domain', null);
-                $set('limit', null);
-            });
-    }
-
     protected static function copyFromField(): Component
     {
-        return parent::copyFromField()
-            ->relationship(
-                name: 'parent',
-                titleAttribute: 'domain',
-                modifyQueryUsing: fn (Builder $query, Get $get) => $query
-                    ->when(
-                        $get('organization_id'),
-                        fn (Builder $query, int $organizationId) => $query->where('organization_id', $organizationId),
-                    ),
-            )
-            ->disabled(fn (Get $get) => ! $get('organization_id'));
+        return parent::copyFromField();
     }
 
     protected static function hostingField(): Component
     {
         return parent::hostingField()
-            ->relationship(
-                name: 'hosting',
-                titleAttribute: 'domain',
-                modifyQueryUsing: fn (Builder $query, Get $get) => $query
-                    ->when(
-                        $get('organization_id'),
-                        fn (Builder $query, int $organizationId) => $query->where('organization_id', $organizationId),
-                    )
-                    ->withCount('sites'),
-            );
+            ->relationship('hosting', 'domain', fn ($query) => $query->withCount('sites'));
     }
 
     public static function configure(Schema $schema): Schema
@@ -68,8 +29,6 @@ class SiteForm extends BaseSiteForm
             ->components([
                 self::sshSection(),
                 Group::make([
-                    self::organizationField()
-                        ->columnSpanFull(),
                     self::copyFromField(),
                     self::siteNameField(),
                     self::hostingField()

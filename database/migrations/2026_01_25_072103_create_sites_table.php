@@ -14,7 +14,6 @@ return new class extends Migration
     {
         Schema::create('sites', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('organization_id')->constrained()->cascadeOnDelete();
             $table->foreignId('parent_id')->nullable()->constrained('sites')->nullOnDelete();
             $table->foreignId('hosting_id')->constrained()->cascadeOnDelete();
             $table->string('name')->index();
