@@ -34,12 +34,14 @@ class HostingForm
                         ]);
                     }),
                 Select::make('organization_id')
+                    ->label('Team')
                     ->relationship('organization', 'name')
                     ->searchable()
                     ->preload()
                     ->required()
                     ->live(),
                 Select::make('server_id')
+                    ->label('WHM')
                     ->relationship('server', 'name')
                     ->hint(str('Optional for standalone cPanel accounts.')->inlineMarkdown()->toHtmlString())
                     ->searchable()

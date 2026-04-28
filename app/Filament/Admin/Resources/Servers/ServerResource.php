@@ -24,6 +24,8 @@ class ServerResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
+    protected static ?string $navigationLabel = 'WHM';
+
     public static function form(Schema $schema): Schema
     {
         return ServerForm::configure($schema);

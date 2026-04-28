@@ -23,6 +23,8 @@ class OrganizationResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
+    protected static ?string $navigationLabel = 'Teams';
+
     public static function form(Schema $schema): Schema
     {
         return OrganizationForm::configure($schema);

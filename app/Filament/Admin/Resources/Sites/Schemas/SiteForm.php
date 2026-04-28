@@ -18,6 +18,7 @@ class SiteForm extends BaseSiteForm
     protected static function organizationField(): Component
     {
         return Select::make('organization_id')
+            ->label('Team')
             ->relationship('organization', 'name')
             ->searchable()
             ->preload()
