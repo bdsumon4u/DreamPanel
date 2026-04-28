@@ -16,12 +16,12 @@ Schedule::command('queue:work --queue=high,default,low --tries=3 --delay=60 --ti
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/queue-'.date('Y-m-d').'.log'));
 
-// Schedule::command('sites:status-checks')
-//     ->dailyAt('02:00')
-//     ->timezone('Asia/Dhaka')
-//     ->runInBackground()
-//     ->withoutOverlapping()
-//     ->appendOutputTo(storage_path('logs/status-'.date('Y-m-d').'.log'));
+Schedule::command('sites:status-checks')
+    ->dailyAt('02:00')
+    ->timezone('Asia/Dhaka')
+    ->runInBackground()
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/status-'.date('Y-m-d').'.log'));
 
 Schedule::command('sites:delete-files')
     ->dailyAt('04:00')

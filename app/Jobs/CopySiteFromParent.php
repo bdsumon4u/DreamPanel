@@ -38,19 +38,19 @@ class CopySiteFromParent implements ShouldQueue
             ->disableStrictHostKeyChecking()
             ->setTimeout(1000)
             ->execute([
-                'cd '.$this->site->parent->directory,
+                'cd '.$this->site->parent->full_directory,
                 './copy.sh '.collect([
                     '-s' => $this->site->name,
                     '-d' => $this->site->domain,
                     '-h' => $this->site->hosting->connectionIp(),
                     '-u' => $this->site->username,
-                    '-su' => $this->site->username,
-                    '-db' => $this->site->database_name,
-                    '-dbu' => $this->site->database_user,
+                    '-su' => $this->site->hosting->username,
+                    '-db' => $this->site->effective_database_name,
+                    '-dbu' => $this->site->effective_database_user,
                     '-dbp' => $this->site->database_pass,
                     '-mu' => $this->site->email_username,
                     '-mp' => $this->site->email_password,
-                    '-r' => $this->site->directory,
+                    '-r' => $this->site->full_directory,
                 ])
                     ->flatMap(fn ($val, $key) => [$key, '"'.$val.'"'])
                     ->implode(' '),

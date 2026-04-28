@@ -1,10 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Jobs;
 
 use App\Enums\SiteStatus;
 use App\Jobs\Traits\CanDelete;
 use App\Models\Site;
+use App\Services\HostingProviders\CloudPanelProvider;
 use App\Services\HostingProviders\HostingProviderResolver;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -36,6 +39,8 @@ class DeleteDomain implements ShouldQueue
 
         $this->site->update(['status' => SiteStatus::DELETING]);
 
+        $provider = app(HostingProviderResolver::class)->resolve($this->site->hosting);
+
         try {
             Log::info('Starting deletion process', [
                 'domain' => $this->site->domain,
@@ -43,11 +48,16 @@ class DeleteDomain implements ShouldQueue
                 'directory' => $this->site->directory,
             ]);
 
-            app(HostingProviderResolver::class)
-                ->resolve($this->site->hosting)
-                ->deleteDomain($this->site);
+            $provider->deleteDomain($this->site);
 
-            $this->site->delete();
+            if ($provider instanceof CloudPanelProvider) {
+                $this->site->update([
+                    'status' => SiteStatus::DELETED,
+                    'deleted_at' => now(),
+                ]);
+            } else {
+                $this->site->delete();
+            }
 
             Log::info('Site deletion completed', [
                 'domain' => $this->site->domain,
@@ -63,6 +73,22 @@ class DeleteDomain implements ShouldQueue
 
             throw $e;
         } catch (Throwable $e) {
+            if (str_contains($e->getMessage(), 'does not exist')) {
+                Log::warning('Skipping site deletion because the remote domain no longer exists', [
+                    'domain' => $this->site->domain,
+                    'site_id' => $this->site->id,
+                    'error' => $e->getMessage(),
+                ]);
+
+                if ($provider instanceof CloudPanelProvider) {
+                    $this->site->update(['status' => SiteStatus::DELETED, 'deleted_at' => now()]);
+                } else {
+                    $this->site->delete();
+                }
+
+                return;
+            }
+
             Log::error('Error deleting site', [
                 'domain' => $this->site->domain,
                 'error' => $e->getMessage(),

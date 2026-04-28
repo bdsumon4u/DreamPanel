@@ -37,16 +37,19 @@ class ForceUpdate implements ShouldQueue
                 ->disableStrictHostKeyChecking()
                 ->setTimeout(1000)
                 ->execute([
-                    'cd '.$this->site->directory,
-                    'origin_file=$(mktemp) && git remote get-url origin > "$origin_file" 2>/dev/null || true',
+                    'cd '.$this->site->full_directory,
+                    'git config --global --add safe.directory "$(pwd)"',
+                    'echo "Current directory: $(pwd)"',
+                    'current_branch=master',
                     'rm -rf .git',
                     'git init',
-                    'if [ -s "$origin_file" ]; then git remote add origin "$(cat "$origin_file")"; fi',
-                    'rm -f "$origin_file"',
+                    'git config --global init.defaultBranch "$current_branch"',
+                    'git remote add origin https://github.com/bdsumon4u/HotashKom.git',
                     'git fetch',
                     'git clean -fd -e .env -e storage/app/public',
                     'rm -f storage/app/public/.gitignore',
-                    'git pull origin master',
+                    'git pull origin "$current_branch"',
+                    'chown -R '.$this->site->username.':'.$this->site->username.' .',
 
                     // Check and update/add CACHE_DRIVER
                     'grep -q "^CACHE_DRIVER=" .env && sed -i "s/^CACHE_DRIVER=.*/CACHE_DRIVER=database/" .env || echo "CACHE_DRIVER=database" >> .env',

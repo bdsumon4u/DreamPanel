@@ -39,7 +39,7 @@ class UpdateSite implements ShouldQueue
                 ->disableStrictHostKeyChecking()
                 ->setTimeout(700)
                 ->execute([
-                    'cd '.$this->site->directory,
+                    'cd '.$this->site->full_directory,
                     './server_deploy.sh',
                 ]);
 
@@ -58,8 +58,7 @@ class UpdateSite implements ShouldQueue
             $this->site->update(['status' => SiteStatus::SITE_ACTIVE]);
         } catch (\Exception $e) {
             $this->site->update(['status' => SiteStatus::UPDATE_FAILED]);
-            // Log the exception message to capture more details
-            throw new \RuntimeException('SSH connection failed, please check the server and public key setup. Error: '.$e->getMessage());
+            throw new \RuntimeException('Update failed during remote deploy execution. Error: '.$e->getMessage());
         }
     }
 }

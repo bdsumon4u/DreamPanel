@@ -8,6 +8,8 @@ use App\Models\Site;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Spatie\Ssh\Ssh;
 use Throwable;
 
 class DeleteFiles implements ShouldQueue
@@ -35,27 +37,34 @@ class DeleteFiles implements ShouldQueue
         }
 
         try {
-            Log::info('Deleting files from filesystem via FTP', [
+            Log::info('Deleting files from filesystem via SSH', [
                 'domain' => $this->site->domain,
-                'directory' => $this->site->directory,
+                'directory' => $this->site->full_directory,
             ]);
 
-            $ftp = $this->site->hosting->ftp();
+            $deleteCommand = 'rm -rf '.escapeshellarg($this->site->full_directory);
+            $process = Ssh::create($this->site->hosting->username, $this->site->hosting->connectionIp())
+                ->usePrivateKey(Storage::disk('local')->path('HOTASH'))
+                ->disablePasswordAuthentication()
+                ->disableStrictHostKeyChecking()
+                ->usePort($this->site->hosting->sshPort())
+                ->setTimeout(300)
+                ->execute([$deleteCommand]);
 
-            if ($ftp->exists($this->site->directory)) {
-                $ftp->deleteDirectory($this->site->directory);
+            if (! $process->isSuccessful()) {
+                throw new \RuntimeException('SSH delete command failed: '.trim($process->getErrorOutput()));
             }
 
-            Log::info('Successfully deleted files from filesystem via FTP', [
+            Log::info('Successfully deleted files from filesystem via SSH', [
                 'domain' => $this->site->domain,
-                'directory' => $this->site->directory,
+                'directory' => $this->site->full_directory,
             ]);
 
             $this->site->update(['status' => SiteStatus::DELETED]);
         } catch (Throwable $e) {
-            Log::warning('Error deleting files from filesystem via FTP', [
+            Log::warning('Error deleting files from filesystem via SSH', [
                 'domain' => $this->site->domain,
-                'directory' => $this->site->directory,
+                'directory' => $this->site->full_directory,
                 'error' => $e->getMessage(),
             ]);
 

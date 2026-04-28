@@ -2,6 +2,7 @@
 
 namespace App\Jobs\Traits;
 
+use App\Enums\HostingProvider;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Log;
 
@@ -27,6 +28,10 @@ trait CanDelete
 
     private function isPrimary(): bool
     {
+        if ($this->site->hosting->provider !== HostingProvider::Cpanel) {
+            return false;
+        }
+
         if ($this->site->domain === $this->site->hosting->domain) {
             return true;
         }

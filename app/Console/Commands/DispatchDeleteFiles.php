@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\HostingProvider;
 use App\Enums\SiteStatus;
 use App\Jobs\DeleteFiles;
 use App\Models\Site;
@@ -30,7 +31,8 @@ class DispatchDeleteFiles extends Command
     {
         Site::onlyTrashed()
             ->where('status', SiteStatus::DELETING)
-            ->chunk(50, function ($sites) {
+            ->whereHas('hosting', fn ($query) => $query->where('provider', HostingProvider::Cpanel))
+            ->chunkById(50, function ($sites) {
                 foreach ($sites as $site) {
                     DeleteFiles::dispatch($site)->onQueue('low');
                 }

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Enums\HostingProvider;
 use App\Enums\SiteStatus;
 use App\Filament\Resources\Sites\SiteResource;
 use App\Jobs\DeleteFiles;
@@ -27,6 +28,7 @@ class DeletingSitesWidget extends BaseWidget
             ->query(
                 Site::onlyTrashed()
                     ->when(Filament::getTenant(), fn ($query) => $query->whereBelongsTo(Filament::getTenant()))
+                    ->whereHas('hosting', fn ($query) => $query->where('provider', HostingProvider::Cpanel))
                     ->where('status', SiteStatus::DELETING)
                     ->orderBy('updated_at', 'desc')
             )

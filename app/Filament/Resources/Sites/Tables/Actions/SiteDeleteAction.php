@@ -26,5 +26,13 @@ class SiteDeleteAction extends DeleteAction
 
             return $record->update(['status' => SiteStatus::PENDING_DELETE]);
         });
+
+        $this->hidden(static function (Model $record): bool {
+            if (! method_exists($record, 'trashed')) {
+                return false;
+            }
+
+            return $record->trashed() && $record->status !== SiteStatus::DELETE_FAILED;
+        });
     }
 }
