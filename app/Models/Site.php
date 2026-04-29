@@ -27,6 +27,8 @@ class Site extends Model
         return [
             'parent_id' => 'integer',
             'hosting_id' => 'integer',
+            'site_user' => 'string',
+            'site_password' => 'encrypted',
             'email_password' => 'encrypted',
             'database_pass' => 'encrypted',
             'status' => SiteStatus::class,

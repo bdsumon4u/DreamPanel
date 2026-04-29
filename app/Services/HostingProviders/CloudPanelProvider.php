@@ -25,7 +25,7 @@ class CloudPanelProvider implements HasSiteUser, HostingProviderContract
                 $this->escape($site->domain),
                 $this->escape('Laravel 12'),
                 $this->escape($this->getSiteUser($site)),
-                $this->escape('Password123!')
+                $this->escape($this->getSitePassword($site))
             ));
         } catch (\RuntimeException $exception) {
             if (str_contains($exception->getMessage(), 'domainName: This value already exists.')) {
@@ -124,6 +124,10 @@ class CloudPanelProvider implements HasSiteUser, HostingProviderContract
 
     public function getSiteUser(Site $site): string
     {
+        if (filled($site->site_user)) {
+            return (string) $site->site_user;
+        }
+
         $maxLength = 24;
         $suffix = dechex((int) $site->id);
         $suffix = $suffix !== '' ? $suffix : substr(md5($site->domain), 0, 6);
@@ -145,6 +149,11 @@ class CloudPanelProvider implements HasSiteUser, HostingProviderContract
         }
 
         return $username;
+    }
+
+    private function getSitePassword(Site $site): string
+    {
+        return filled($site->site_password) ? (string) $site->site_password : 'Password123!';
     }
 
     private function sanitizeSshErrorOutput(string $errorOutput): string

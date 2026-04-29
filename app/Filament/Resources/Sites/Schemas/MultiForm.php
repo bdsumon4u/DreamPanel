@@ -22,7 +22,8 @@ class MultiForm extends SiteForm
                 TextInput::make('email_password')
                     ->label('Email Password')
                     ->required()
-                    ->default('Pass<word>123!')
+                    ->default('Password123!')
+                    ->visible(fn (Get $get): bool => ! self::isCloudPanelHosting($get))
                     ->live()
                     ->afterStateUpdated(function (Get $get, Set $set, mixed $state) {
                         foreach ($get('sites') ?? [] as $index => $site) {
@@ -32,11 +33,23 @@ class MultiForm extends SiteForm
                 TextInput::make('database_pass')
                     ->label('Database Password')
                     ->required()
-                    ->default('Pass<word>123!')
+                    ->default('Password123!')
                     ->live()
                     ->afterStateUpdated(function (Get $get, Set $set, mixed $state) {
                         foreach ($get('sites') ?? [] as $index => $site) {
                             $set("sites.{$index}.database_pass", $state);
+                        }
+                    }),
+                TextInput::make('site_password')
+                    ->label('Site Password')
+                    ->password()
+                    ->revealable()
+                    ->default('Password123!')
+                    ->visible(fn (Get $get): bool => self::isCloudPanelHosting($get))
+                    ->live()
+                    ->afterStateUpdated(function (Get $get, Set $set, mixed $state) {
+                        foreach ($get('sites') ?? [] as $index => $site) {
+                            $set("sites.{$index}.site_password", $state);
                         }
                     }),
                 Repeater::make('sites')
@@ -66,14 +79,16 @@ class MultiForm extends SiteForm
                     Group::make([
                         self::domainField('../../'),
                         self::directoryField('../../'),
-                        self::emailSection()
+                        self::siteUserField('../../'),
+                        self::sitePasswordField('../../'),
+                        self::emailSection('../../')
                             ->columns(2)
                             ->columnSpanFull(),
                     ])
                         ->dense()
                         ->columns(2)
                         ->columnSpan(2),
-                    self::databaseSection('../../')
+                    self::databaseSection()
                         ->columns(3)
                         ->columnSpan(3),
                 ]),

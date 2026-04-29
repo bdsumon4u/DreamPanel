@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Sites\Schemas;
 
+use App\Enums\HostingProvider;
 use App\Models\Hosting;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
@@ -126,7 +127,7 @@ class SiteForm
             );
     }
 
-    protected static function emailSection(): Component
+    protected static function emailSection(string $statePrefix = ''): Component
     {
         return Section::make('Mail')
             ->collapsed()
@@ -134,7 +135,8 @@ class SiteForm
             ->schema([
                 self::emailUsernameFile(),
                 self::emailPasswordField(),
-            ]);
+            ])
+            ->visible(fn (Get $get): bool => ! self::isCloudPanelHosting($get, $statePrefix));
     }
 
     protected static function copyFromField(): Component
@@ -152,6 +154,37 @@ class SiteForm
             ->required();
     }
 
+    protected static function siteUserField(string $statePrefix = ''): Component
+    {
+        return TextInput::make('site_user')
+            ->label('Site User')
+            ->maxLength(24)
+            ->helperText('Optional for CloudPanel. Leave empty to auto-generate.')
+            ->visible(fn (Get $get): bool => self::isCloudPanelHosting($get, $statePrefix))
+            ->disabled(function (Get $get) use ($statePrefix) {
+                return ! $get($statePrefix.'hosting_id') || ! $get($statePrefix.'limit');
+            });
+    }
+
+    protected static function sitePasswordField(string $statePrefix = ''): Component
+    {
+        return TextInput::make('site_password')
+            ->label('Site Password')
+            ->password()
+            ->revealable()
+            ->default(fn (Get $get) => $get('../../site_password') ?? 'Password123!')
+            ->helperText('Optional for CloudPanel. Leave empty to use fallback password.')
+            ->visible(fn (Get $get): bool => self::isCloudPanelHosting($get, $statePrefix))
+            ->disabled(function (Get $get) use ($statePrefix) {
+                return ! $get($statePrefix.'hosting_id') || ! $get($statePrefix.'limit');
+            });
+    }
+
+    protected static function isCloudPanelHosting(Get $get, string $statePrefix = ''): bool
+    {
+        return $get($statePrefix.'hosting_provider') === HostingProvider::CloudPanel->value;
+    }
+
     protected static function hostingField(): Component
     {
         return Select::make('hosting_id')
@@ -165,19 +198,34 @@ class SiteForm
             ->getOptionLabelFromRecordUsing(function (?Model $record) {
                 return $record ? $record->domain.' ('.$record->sites_count.' / '.$record->site_limit.')' : '';
             })
-            ->afterStateUpdated(function (Set $set, mixed $state): void {
+            ->afterStateUpdated(function (Get $get, Set $set, mixed $state): void {
                 if (! $state) {
                     $set('hosting_domain', null);
                     $set('limit', null);
+                    $set('hosting_provider', null);
 
                     return;
                 }
 
                 $hosting = Hosting::select([
-                    'id', 'domain', 'site_limit',
+                    'id', 'domain', 'provider', 'site_limit',
                 ])->withCount('sites')->findOrFail($state);
                 $set('hosting_domain', $hosting->domain);
                 $set('limit', max($hosting->site_limit - $hosting->sites_count, 0));
+                $set('hosting_provider', $hosting->provider?->value ?? $hosting->provider);
+
+                if (
+                    ($hosting->provider?->value ?? $hosting->provider) === HostingProvider::CloudPanel->value
+                    && blank($get('site_user'))
+                    && filled($get('domain'))
+                ) {
+                    $siteUser = Str::lower((string) preg_replace('/[^a-z0-9]/', '', (string) $get('domain')));
+                    if ($siteUser === '' || ctype_digit($siteUser[0])) {
+                        $siteUser = 'site'.$siteUser;
+                    }
+
+                    $set('site_user', substr($siteUser, 0, 24));
+                }
             })
             ->hint(function (Get $get) {
                 if (! is_null($get('limit'))) {
@@ -203,13 +251,22 @@ class SiteForm
                 $set('email_username', 'support@'.$state);
                 $set('database_name', Str::slug($state, '_'));
                 $set('database_user', Str::slug($state, '_'));
+
+                if (self::isCloudPanelHosting($get, $statePrefix) && blank($get($statePrefix.'site_user'))) {
+                    $siteUser = Str::lower((string) preg_replace('/[^a-z0-9]/', '', $state));
+                    if ($siteUser === '' || ctype_digit($siteUser[0])) {
+                        $siteUser = 'site'.$siteUser;
+                    }
+
+                    $set($statePrefix.'site_user', substr($siteUser, 0, 24));
+                }
             });
     }
 
     protected static function directoryField(string $statePrefix = ''): Component
     {
         return TextInput::make('directory')
-            ->regex('/^[a-zA-Z0-9._]+$/')
+            ->regex('/^[a-zA-Z0-9._-]+$/')
             ->disabled(function (Get $get) use ($statePrefix) {
                 return ! $get($statePrefix.'hosting_id') || ! $get($statePrefix.'limit');
             })
@@ -236,11 +293,14 @@ class SiteForm
                     self::emailSection()
                         ->collapsed(false)
                         ->columns(2)
-                        ->columnSpan(1),
+                        ->columnSpanFull(),
+                    self::siteUserField(),
+                    self::sitePasswordField(),
                     self::databaseSection()
                         ->columns(3)
-                        ->columnSpan(1),
+                        ->columnSpanFull(),
                 ])
+                    ->columns(2)
                     ->dense()
                     ->columnSpan(3),
             ])
