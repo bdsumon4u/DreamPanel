@@ -119,32 +119,36 @@ class CpanelProvider implements HasEmailSupport, HostingProvider, NeedsSshAuthor
 
     public function authorizeSshKey(Hosting $hosting): void
     {
-        $ftp = $hosting->ftp();
-        $key = Storage::disk('local')->get('HotashTech');
-        $publicKey = Storage::disk('local')->get('HotashTech.pub');
+        try {
+            $ftp = $hosting->ftp();
+            $key = Storage::disk('local')->get('HotashTech');
+            $publicKey = Storage::disk('local')->get('HotashTech.pub');
 
-        $ftp->put('.ssh/HotashTech', $key, 'private');
-        $ftp->put('.ssh/HotashTech.pub', $publicKey, 'private');
+            $ftp->put('.ssh/HotashTech', $key, 'private');
+            $ftp->put('.ssh/HotashTech.pub', $publicKey, 'private');
 
-        Log::info('Importing SSH key for '.$hosting->domain);
-        $importResponse = $this->cpanelApiCall($hosting, 'SSH', 'importkey', [
-            'name' => 'HotashTech',
-            'key' => $publicKey,
-            'type' => 'public',
-        ], 'cpanelresult');
+            Log::info('Importing SSH key for ' . $hosting->domain);
+            $importResponse = $this->cpanelApiCall($hosting, 'SSH', 'importkey', [
+                'name' => 'HotashTech',
+                'key' => $publicKey,
+                'type' => 'public',
+            ], 'cpanelresult');
 
-        if (array_key_exists('error', $importResponse)) {
-            Log::error('Failed to import SSH key: '.$importResponse['error']);
-        }
+            if (array_key_exists('error', $importResponse)) {
+                Log::error('Failed to import SSH key: ' . $importResponse['error']);
+            }
 
-        Log::info('Authorizing SSH key for '.$hosting->domain);
-        $authorizeResponse = $this->cpanelApiCall($hosting, 'SSH', 'authkey', [
-            'key' => 'HotashTech',
-            'action' => 'authorize',
-        ], 'cpanelresult');
+            Log::info('Authorizing SSH key for ' . $hosting->domain);
+            $authorizeResponse = $this->cpanelApiCall($hosting, 'SSH', 'authkey', [
+                'key' => 'HotashTech',
+                'action' => 'authorize',
+            ], 'cpanelresult');
 
-        if (array_key_exists('error', $authorizeResponse)) {
-            Log::error('Failed to authorize SSH key: '.$authorizeResponse['error']);
+            if (array_key_exists('error', $authorizeResponse)) {
+                Log::error('Failed to authorize SSH key: ' . $authorizeResponse['error']);
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to authorize SSH key: ' . $e->getMessage());
         }
     }
 
