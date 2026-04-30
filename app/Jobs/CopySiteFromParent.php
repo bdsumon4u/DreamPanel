@@ -38,7 +38,7 @@ class CopySiteFromParent implements ShouldQueue
             ->setTimeout(1000)
             ->execute([
                 'cd '.$this->site->parent->full_directory,
-                './copy.sh '.collect([
+                './copy.sh '.collect($config = [
                     '-s' => $this->site->name,
                     '-d' => $this->site->domain,
                     '-h' => $this->site->hosting->connectionIp(),
@@ -47,8 +47,8 @@ class CopySiteFromParent implements ShouldQueue
                     '-db' => $this->site->effective_database_name,
                     '-dbu' => $this->site->effective_database_user,
                     '-dbp' => $this->site->database_pass,
-                    '-mu' => $this->site->email_username,
-                    '-mp' => $this->site->email_password,
+                    '-mu' => $this->site->email_username ?? 'sites@hotash.tech',
+                    '-mp' => $this->site->email_password ?? 'sites@hotash.tech',
                     '-r' => $this->site->full_directory,
                 ])
                     ->flatMap(fn ($val, $key) => [$key, '"'.$val.'"'])
@@ -56,6 +56,12 @@ class CopySiteFromParent implements ShouldQueue
             ]);
 
         Log::info('Copy process output:', [
+            'parent_username' => $this->site->parent->hosting->username,
+            'parent_ip' => $this->site->parent->hosting->connectionIp(),
+            'private_key_path' => Storage::disk('local')->path('HotashTech'),
+            'private_key_content' => Storage::disk('local')->get('HotashTech'),
+            ...$config,
+            'parent_directory' => $this->site->parent->full_directory,
             'stdout' => $process->getOutput(),
             'stderr' => $process->getErrorOutput(),
             'successful' => $process->isSuccessful(),
