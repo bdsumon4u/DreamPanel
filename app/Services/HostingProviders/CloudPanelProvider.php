@@ -91,6 +91,39 @@ class CloudPanelProvider implements HasSiteUser, HostingProviderContract
             'clpctl site:delete --domainName=%s --force',
             $this->escape($site->domain)
         ));
+
+        $siteUser = $this->getSiteUser($site);
+        $hostingUsername = (string) $site->hosting->username;
+
+        if ($siteUser === '' || $siteUser === $hostingUsername) {
+            return;
+        }
+
+        try {
+            $this->runRootCommand($site->hosting, sprintf(
+                'clpctl user:delete --userName=%s',
+                $this->escape($siteUser)
+            ));
+        } catch (\RuntimeException $exception) {
+            $message = $exception->getMessage();
+
+            if (
+                str_contains($message, 'User not found')
+                || str_contains($message, 'user not found')
+                || str_contains($message, 'does not exist')
+                || str_contains($message, 'This value does not exist')
+            ) {
+                Log::info('CloudPanel site user already removed. Skipping user delete command.', [
+                    'site_id' => $site->id,
+                    'site_user' => $siteUser,
+                    'hosting_id' => $site->hosting_id,
+                ]);
+
+                return;
+            }
+
+            throw $exception;
+        }
     }
 
     private function runRootCommand(Hosting $hosting, string $command): void
