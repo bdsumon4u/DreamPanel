@@ -13,6 +13,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
+use Illuminate\Database\Eloquent\Builder;
 
 class DeletingSitesWidget extends BaseWidget
 {
@@ -20,15 +21,27 @@ class DeletingSitesWidget extends BaseWidget
 
     protected static ?string $heading = 'Sites Being Deleted';
 
+    public static function canView(): bool
+    {
+        return static::deletingSitesQuery()->exists();
+    }
+
+    /**
+     * @return Builder<Site>
+     */
+    protected static function deletingSitesQuery(): Builder
+    {
+        return Site::onlyTrashed()
+            ->whereHas('hosting', fn ($query) => $query->where('provider', HostingProvider::Cpanel))
+            ->where('status', SiteStatus::DELETING);
+    }
+
     public function table(Table $table): Table
     {
         return $table
             ->poll('5s')
             ->query(
-                Site::onlyTrashed()
-                    ->whereHas('hosting', fn ($query) => $query->where('provider', HostingProvider::Cpanel))
-                    ->where('status', SiteStatus::DELETING)
-                    ->orderBy('updated_at', 'desc')
+                static::deletingSitesQuery()->orderBy('updated_at', 'desc')
             )
             ->groups([
                 Group::make('hosting.domain'),
