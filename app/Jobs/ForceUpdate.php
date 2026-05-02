@@ -73,7 +73,10 @@ class ForceUpdate implements ShouldQueue
                     .' Standard output: '.($standardOutput !== '' ? $standardOutput : '[none]')
                 );
             }
-            $this->site->update(['status' => SiteStatus::SITE_ACTIVE]);
+            $this->site->update([
+                'status' => SiteStatus::SITE_ACTIVE,
+                'updated_at' => now(),
+            ]);
         } catch (\Exception $e) {
             $this->site->update(['status' => SiteStatus::UPDATE_FAILED]);
             // Log the exception message to capture more details

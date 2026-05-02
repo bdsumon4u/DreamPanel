@@ -17,6 +17,12 @@ class Site extends Model
     use LogsActivity;
     use SoftDeletes;
 
+    /**
+     * Do not maintain updated_at on arbitrary saves. It is set explicitly when
+     * {@see \App\Jobs\UpdateSite} or {@see \App\Jobs\ForceUpdate} completes successfully.
+     */
+    public const UPDATED_AT = null;
+
     protected $hidden = [
         // 'email_password',
         // 'database_pass',

@@ -55,7 +55,10 @@ class UpdateSite implements ShouldQueue
                     .' Standard output: '.($standardOutput !== '' ? $standardOutput : '[none]')
                 );
             }
-            $this->site->update(['status' => SiteStatus::SITE_ACTIVE]);
+            $this->site->update([
+                'status' => SiteStatus::SITE_ACTIVE,
+                'updated_at' => now(),
+            ]);
         } catch (\Exception $e) {
             $this->site->update(['status' => SiteStatus::UPDATE_FAILED]);
             throw new \RuntimeException('Update failed during remote deploy execution. Error: '.$e->getMessage());
