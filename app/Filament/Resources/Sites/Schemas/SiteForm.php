@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Sites\Schemas;
 use App\Enums\HostingProvider;
 use App\Models\Hosting;
 use Filament\Actions\Action;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -324,6 +325,18 @@ class SiteForm
             ->required();
     }
 
+    protected static function renewDateField(string $statePrefix = ''): Component
+    {
+        return DatePicker::make('renew_date')
+            ->label(__('Renew date'))
+            ->native(false)
+            ->displayFormat('M j, Y')
+            ->nullable()
+            ->disabled(function (Get $get) use ($statePrefix) {
+                return ! $get($statePrefix.'hosting_id') || ! $get($statePrefix.'limit');
+            });
+    }
+
     public static function configure(Schema $schema): Schema
     {
         return $schema
@@ -336,6 +349,8 @@ class SiteForm
                         ->columnSpanFull(),
                     self::domainField(),
                     self::directoryField(),
+                    self::renewDateField()
+                        ->columnSpanFull(),
                 ])
                     ->dense()
                     ->columns(2)

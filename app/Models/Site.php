@@ -39,6 +39,7 @@ class Site extends Model
             'database_pass' => 'encrypted',
             'status' => SiteStatus::class,
             'laravel_maintenance_mode' => 'boolean',
+            'renew_date' => 'date',
         ];
     }
 

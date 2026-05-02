@@ -62,6 +62,11 @@ class SitesTable
                     ->badge()
                     ->color(fn (?bool $state): string => $state ? 'warning' : 'success')
                     ->sortable(),
+                TextColumn::make('renew_date')
+                    ->label(__('Renew date'))
+                    ->date()
+                    ->sortable()
+                    ->toggleable(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

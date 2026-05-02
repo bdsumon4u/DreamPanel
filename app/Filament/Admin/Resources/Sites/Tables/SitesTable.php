@@ -10,8 +10,6 @@ use App\Filament\Resources\Sites\Tables\Actions\BulkSiteMaintenanceUpAction;
 use App\Filament\Resources\Sites\Tables\SitesTable as BaseSitesTable;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\ExportBulkAction;
-use Filament\Tables\Filters\QueryBuilder;
-use Filament\Tables\Filters\QueryBuilder\Constraints\NumberConstraint;
 use Filament\Tables\Table;
 
 class SitesTable extends BaseSitesTable
@@ -23,11 +21,6 @@ class SitesTable extends BaseSitesTable
         return $table->columns($table->getColumns())
             ->filters([
                 ...$table->getFilters(),
-                QueryBuilder::make()->constraints([
-                    NumberConstraint::make('service_id')
-                        ->label(__('Service ID'))
-                        ->nullable(),
-                ]),
             ])
             ->recordUrl(fn ($record) => SiteResource::getUrl('view', ['record' => $record]))
             ->toolbarActions([

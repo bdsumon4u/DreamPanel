@@ -6,6 +6,7 @@ use AchyutN\FilamentLogViewer\FilamentLogViewer;
 use App\Filament\Admin\Pages\Dashboard;
 use App\Filament\Admin\Widgets\DeletingSitesWidget;
 use App\Filament\Admin\Widgets\MaintenanceModeSitesWidget;
+use App\Filament\Admin\Widgets\SitesRenewingWithinWeekWidget;
 use Filament\FontProviders\GoogleFontProvider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -53,6 +54,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Admin/Widgets'), for: 'App\Filament\Admin\Widgets')
             ->widgets([
+                SitesRenewingWithinWeekWidget::class,
                 MaintenanceModeSitesWidget::class,
                 DeletingSitesWidget::class,
                 // AccountWidget::class,

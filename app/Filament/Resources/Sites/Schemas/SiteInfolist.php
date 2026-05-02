@@ -18,6 +18,10 @@ class SiteInfolist
                 TextEntry::make('name'),
                 TextEntry::make('domain'),
                 TextEntry::make('directory'),
+                TextEntry::make('renew_date')
+                    ->label(__('Renew date'))
+                    ->date()
+                    ->placeholder('-'),
                 TextEntry::make('email_username'),
                 TextEntry::make('database_name'),
                 TextEntry::make('status')

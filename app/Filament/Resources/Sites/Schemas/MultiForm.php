@@ -81,6 +81,8 @@ class MultiForm extends SiteForm
                         self::directoryField('../../'),
                         self::siteUserField('../../'),
                         self::sitePasswordField('../../'),
+                        self::renewDateField('../../')
+                            ->columnSpanFull(),
                         self::emailSection('../../')
                             ->columns(2)
                             ->columnSpanFull(),
