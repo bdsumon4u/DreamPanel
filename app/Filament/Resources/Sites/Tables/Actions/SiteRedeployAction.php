@@ -4,8 +4,13 @@ namespace App\Filament\Resources\Sites\Tables\Actions;
 
 use App\Actions\DeploySite;
 use Filament\Actions\Action;
+use Filament\Facades\Filament;
+use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Support\Colors\Color;
+use Filament\Support\Exceptions\Halt;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\HtmlString;
 
 class SiteRedeployAction extends Action
@@ -29,6 +34,27 @@ class SiteRedeployAction extends Action
         $this->color(Color::Red);
         $this->icon('heroicon-o-arrow-path');
 
-        $this->action(static fn (Model $record) => (new DeploySite)->handle($record));
+        $this->action(function (Model $record, array $data) {
+            if (Hash::check($data['password'], Filament::auth()->user()->password)) {
+                Notification::make()
+                    ->title('Invalid password')
+                    ->body('The password you entered is incorrect')
+                    ->danger()
+                    ->send();
+
+                $this->failure();
+
+                return new Halt;
+            }
+
+            (new DeploySite)->handle($record);
+        });
+
+        $this->schema([
+            TextInput::make('password')
+                ->password()
+                ->placeholder('Enter password to redeploy')
+                ->required(),
+        ]);
     }
 }
