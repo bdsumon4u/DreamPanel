@@ -127,7 +127,7 @@ class CpanelProvider implements HasEmailSupport, HostingProvider, NeedsSshAuthor
             $ftp->put('.ssh/HotashTech', $key, 'private');
             $ftp->put('.ssh/HotashTech.pub', $publicKey, 'private');
 
-            Log::info('Importing SSH key for ' . $hosting->domain);
+            Log::info('Importing SSH key for '.$hosting->domain);
             $importResponse = $this->cpanelApiCall($hosting, 'SSH', 'importkey', [
                 'name' => 'HotashTech',
                 'key' => $publicKey,
@@ -135,20 +135,20 @@ class CpanelProvider implements HasEmailSupport, HostingProvider, NeedsSshAuthor
             ], 'cpanelresult');
 
             if (array_key_exists('error', $importResponse)) {
-                Log::error('Failed to import SSH key: ' . $importResponse['error']);
+                Log::error('Failed to import SSH key: '.$importResponse['error']);
             }
 
-            Log::info('Authorizing SSH key for ' . $hosting->domain);
+            Log::info('Authorizing SSH key for '.$hosting->domain);
             $authorizeResponse = $this->cpanelApiCall($hosting, 'SSH', 'authkey', [
                 'key' => 'HotashTech',
                 'action' => 'authorize',
             ], 'cpanelresult');
 
             if (array_key_exists('error', $authorizeResponse)) {
-                Log::error('Failed to authorize SSH key: ' . $authorizeResponse['error']);
+                Log::error('Failed to authorize SSH key: '.$authorizeResponse['error']);
             }
         } catch (\Exception $e) {
-            Log::error('Failed to authorize SSH key: ' . $e->getMessage());
+            Log::error('Failed to authorize SSH key: '.$e->getMessage());
         }
     }
 

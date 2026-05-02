@@ -159,7 +159,6 @@ class SiteForm
         return TextInput::make('site_user')
             ->label('Site User')
             ->maxLength(24)
-            ->helperText('Optional for CloudPanel. Leave empty to auto-generate.')
             ->visible(fn (Get $get): bool => self::isCloudPanelHosting($get, $statePrefix))
             ->disabled(function (Get $get) use ($statePrefix) {
                 return ! $get($statePrefix.'hosting_id') || ! $get($statePrefix.'limit');
@@ -173,7 +172,6 @@ class SiteForm
             ->password()
             ->revealable()
             ->default(fn (Get $get) => $get('../../site_password') ?? 'Password123!')
-            ->helperText('Optional for CloudPanel. Leave empty to use fallback password.')
             ->visible(fn (Get $get): bool => self::isCloudPanelHosting($get, $statePrefix))
             ->disabled(function (Get $get) use ($statePrefix) {
                 return ! $get($statePrefix.'hosting_id') || ! $get($statePrefix.'limit');
@@ -183,6 +181,53 @@ class SiteForm
     protected static function isCloudPanelHosting(Get $get, string $statePrefix = ''): bool
     {
         return $get($statePrefix.'hosting_provider') === HostingProvider::CloudPanel->value;
+    }
+
+    /**
+     * @return array{hosting_domain: string, limit: int, hosting_provider: string|null}
+     */
+    protected static function hostingDerivedStateFromModel(Hosting $hosting): array
+    {
+        return [
+            'hosting_domain' => $hosting->domain,
+            'limit' => max($hosting->site_limit - $hosting->sites_count, 0),
+            'hosting_provider' => $hosting->provider?->value ?? $hosting->provider,
+        ];
+    }
+
+    /**
+     * @return array{hosting_domain: string|null, limit: int|null, hosting_provider: string|null}
+     */
+    public static function hostingDerivedState(int|string|null $hostingId): array
+    {
+        if ($hostingId === null || $hostingId === '') {
+            return [
+                'hosting_domain' => null,
+                'limit' => null,
+                'hosting_provider' => null,
+            ];
+        }
+
+        $hosting = Hosting::select([
+            'id', 'domain', 'provider', 'site_limit',
+        ])->withCount('sites')->find((int) $hostingId);
+
+        if (! $hosting) {
+            return [
+                'hosting_domain' => null,
+                'limit' => null,
+                'hosting_provider' => null,
+            ];
+        }
+
+        return self::hostingDerivedStateFromModel($hosting);
+    }
+
+    protected static function applyHostingDerivedState(Set $set, array $derived): void
+    {
+        $set('hosting_domain', $derived['hosting_domain']);
+        $set('limit', $derived['limit']);
+        $set('hosting_provider', $derived['hosting_provider']);
     }
 
     protected static function hostingField(): Component
@@ -198,11 +243,18 @@ class SiteForm
             ->getOptionLabelFromRecordUsing(function (?Model $record) {
                 return $record ? $record->domain.' ('.$record->sites_count.' / '.$record->site_limit.')' : '';
             })
+            ->afterStateHydrated(function (Get $get, Set $set, mixed $state): void {
+                if (! $state) {
+                    self::applyHostingDerivedState($set, self::hostingDerivedState(null));
+
+                    return;
+                }
+
+                self::applyHostingDerivedState($set, self::hostingDerivedState($state));
+            })
             ->afterStateUpdated(function (Get $get, Set $set, mixed $state): void {
                 if (! $state) {
-                    $set('hosting_domain', null);
-                    $set('limit', null);
-                    $set('hosting_provider', null);
+                    self::applyHostingDerivedState($set, self::hostingDerivedState(null));
 
                     return;
                 }
@@ -210,12 +262,11 @@ class SiteForm
                 $hosting = Hosting::select([
                     'id', 'domain', 'provider', 'site_limit',
                 ])->withCount('sites')->findOrFail($state);
-                $set('hosting_domain', $hosting->domain);
-                $set('limit', max($hosting->site_limit - $hosting->sites_count, 0));
-                $set('hosting_provider', $hosting->provider?->value ?? $hosting->provider);
+                $derived = self::hostingDerivedStateFromModel($hosting);
+                self::applyHostingDerivedState($set, $derived);
 
                 if (
-                    ($hosting->provider?->value ?? $hosting->provider) === HostingProvider::CloudPanel->value
+                    $derived['hosting_provider'] === HostingProvider::CloudPanel->value
                     && blank($get('site_user'))
                     && filled($get('domain'))
                 ) {
