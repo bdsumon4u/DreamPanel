@@ -38,6 +38,7 @@ class CloudPanelProvider implements HasSiteUser, HostingProviderContract
                 return;
             }
 
+            info('CloudPanel domain creation failed: '.$exception->getMessage());
             throw $exception;
         }
     }

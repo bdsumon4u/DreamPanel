@@ -117,12 +117,16 @@ class Hosting extends Model
 
     public function copySshKey(): void
     {
+        info('Calling copySshKey for method on Hosting model for hosting: '.$this->domain);
         $provider = app(HostingProviderResolver::class)->resolve($this);
 
         if (! $provider instanceof NeedsSshAuthorization) {
+            info('Provider does not implement NeedsSshAuthorization interface');
+
             return;
         }
 
+        info('Calling authorizeSshKey method on provider: '.$provider::class);
         $provider->authorizeSshKey($this);
     }
 }
