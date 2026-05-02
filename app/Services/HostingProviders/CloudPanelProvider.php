@@ -38,6 +38,16 @@ class CloudPanelProvider implements HasSiteUser, HostingProviderContract
                 return;
             }
 
+            if (str_contains($exception->getMessage(), 'siteUser: This value already exists.')) {
+                Log::info('CloudPanel site user already exists. Skipping create command.', [
+                    'site_id' => $site->id,
+                    'domain' => $site->domain,
+                    'hosting_id' => $site->hosting_id,
+                ]);
+
+                return;
+            }
+
             info('CloudPanel domain creation failed: '.$exception->getMessage());
             throw $exception;
         }
