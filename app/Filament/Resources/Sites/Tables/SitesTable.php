@@ -4,17 +4,21 @@ namespace App\Filament\Resources\Sites\Tables;
 
 use App\Enums\SiteStatus;
 use App\Filament\Resources\Sites\SiteResource;
+use App\Filament\Resources\Sites\Tables\Actions\BulkSiteMaintenanceDownAction;
+use App\Filament\Resources\Sites\Tables\Actions\BulkSiteMaintenanceUpAction;
 use App\Filament\Resources\Sites\Tables\Actions\ForceUpdateAction;
 use App\Filament\Resources\Sites\Tables\Actions\SiteDeleteAction;
+use App\Filament\Resources\Sites\Tables\Actions\SiteMaintenanceDownAction;
+use App\Filament\Resources\Sites\Tables\Actions\SiteMaintenanceUpAction;
 use App\Filament\Resources\Sites\Tables\Actions\SiteRedeployAction;
 use App\Filament\Resources\Sites\Tables\Actions\SiteUpdateAction;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Support\Colors\Color;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
@@ -52,6 +56,12 @@ class SitesTable
                     ->badge()
                     ->sortable()
                     ->searchable(),
+                TextColumn::make('laravel_maintenance_mode')
+                    ->label(__('State'))
+                    ->formatStateUsing(fn (?bool $state): string => $state ? __('Inactive') : __('Live'))
+                    ->badge()
+                    ->color(fn (?bool $state): string => $state ? 'warning' : 'success')
+                    ->sortable(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -80,10 +90,17 @@ class SitesTable
                 SelectFilter::make('status')
                     ->options(SiteStatus::class)
                     ->searchable(),
+                TernaryFilter::make('laravel_maintenance_mode')
+                    ->label(__('Laravel maintenance'))
+                    ->placeholder(__('All sites'))
+                    ->trueLabel(__('In maintenance'))
+                    ->falseLabel(__('Live')),
             ])
             ->recordUrl(fn ($record) => SiteResource::getUrl('view', ['record' => $record]))
             ->recordActions([
                 ActionGroup::make([
+                    SiteMaintenanceDownAction::make(),
+                    SiteMaintenanceUpAction::make(),
                     SiteRedeployAction::make(),
                     SiteUpdateAction::make(),
                     ForceUpdateAction::make(),
@@ -93,9 +110,10 @@ class SitesTable
                 SiteDeleteAction::make(),
             ])
             ->toolbarActions([
-                // BulkActionGroup::make([
-                //     DeleteBulkAction::make(),
-                // ]),
+                BulkActionGroup::make([
+                    BulkSiteMaintenanceDownAction::make(),
+                    BulkSiteMaintenanceUpAction::make(),
+                ]),
             ]);
     }
 }

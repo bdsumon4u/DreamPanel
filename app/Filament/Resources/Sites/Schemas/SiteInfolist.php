@@ -22,6 +22,11 @@ class SiteInfolist
                 TextEntry::make('database_name'),
                 TextEntry::make('status')
                     ->badge(),
+                TextEntry::make('laravel_maintenance_mode')
+                    ->label(__('Laravel maintenance'))
+                    ->formatStateUsing(fn (?bool $state): string => $state ? __('Yes (artisan down)') : __('No (live)'))
+                    ->badge()
+                    ->color(fn (?bool $state): string => $state ? 'warning' : 'success'),
                 TextEntry::make('created_at')
                     ->dateTime()
                     ->placeholder('-'),

@@ -17,6 +17,8 @@ class SiteExporter extends Exporter
         return [
             ExportColumn::make('domain'),
             ExportColumn::make('status'),
+            ExportColumn::make('laravel_maintenance_mode')
+                ->label('Laravel maintenance'),
         ];
     }
 

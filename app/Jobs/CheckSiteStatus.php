@@ -28,23 +28,33 @@ class CheckSiteStatus implements ShouldQueue
      */
     public function handle(): void
     {
-        $status = SiteStatus::SITE_DOWN;
+        $this->site->refresh();
+
+        $reachableAndOk = false;
 
         try {
             /** @var \Illuminate\Http\Client\Response $response */
             $response = Http::timeout(10)->head('http://'.$this->site->domain);
-
-            if ($response->ok()) {
-                $status = SiteStatus::SITE_ACTIVE;
-            }
+            $reachableAndOk = $response->ok();
         } catch (\Exception $e) {
-
+            //
         }
 
-        // Log the site status
-        Log::info("Site: {$this->site->url} - Status: {$status->value}");
+        if ($this->site->laravel_maintenance_mode) {
+            if ($reachableAndOk) {
+                $this->site->update([
+                    'laravel_maintenance_mode' => false,
+                    'status' => SiteStatus::SITE_ACTIVE,
+                ]);
+            }
 
-        // Update the site status in the database
+            return;
+        }
+
+        $status = $reachableAndOk ? SiteStatus::SITE_ACTIVE : SiteStatus::SITE_DOWN;
+
+        Log::info("Site: {$this->site->domain} - Status: {$status->value}");
+
         if ($this->site->status != $status) {
             $this->site->update(['status' => $status]);
         }

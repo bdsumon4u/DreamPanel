@@ -5,9 +5,10 @@ namespace App\Filament\Admin\Resources\Sites\Tables;
 use App\Filament\Admin\Resources\Sites\SiteResource;
 use App\Filament\Admin\Resources\Sites\Tables\Actions\BulkSiteUpdateAction;
 use App\Filament\Exports\SiteExporter;
+use App\Filament\Resources\Sites\Tables\Actions\BulkSiteMaintenanceDownAction;
+use App\Filament\Resources\Sites\Tables\Actions\BulkSiteMaintenanceUpAction;
 use App\Filament\Resources\Sites\Tables\SitesTable as BaseSitesTable;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ExportBulkAction;
 use Filament\Tables\Filters\QueryBuilder;
 use Filament\Tables\Filters\QueryBuilder\Constraints\NumberConstraint;
@@ -34,7 +35,8 @@ class SitesTable extends BaseSitesTable
                     ExportBulkAction::make()
                         ->exporter(SiteExporter::class),
                     BulkSiteUpdateAction::make(),
-                    // DeleteBulkAction::make(),
+                    BulkSiteMaintenanceDownAction::make(),
+                    BulkSiteMaintenanceUpAction::make(),
                 ]),
             ]);
     }

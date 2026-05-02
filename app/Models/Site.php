@@ -38,6 +38,7 @@ class Site extends Model
             'email_password' => 'encrypted',
             'database_pass' => 'encrypted',
             'status' => SiteStatus::class,
+            'laravel_maintenance_mode' => 'boolean',
         ];
     }
 
@@ -49,6 +50,11 @@ class Site extends Model
     public function hosting(): BelongsTo
     {
         return $this->belongsTo(Hosting::class);
+    }
+
+    public function allowsRemoteArtisanMaintenance(): bool
+    {
+        return $this->status === SiteStatus::SITE_ACTIVE;
     }
 
     public function getUsernameAttribute(): string
